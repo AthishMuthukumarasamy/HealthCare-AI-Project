@@ -1,4 +1,5 @@
 
+using Healthcare.API.Data;
 using Healthcare.API.DTOs;
 using Healthcare.API.Models;
 
@@ -6,43 +7,31 @@ namespace Healthcare.API.Services
 {
     public class PatientService : IPatientService
     {
-        private static readonly List<Patient> patients = new()
+        private readonly HealthcareDbContext _context;
+
+        public PatientService(HealthcareDbContext context)
         {
-            new Patient
-            {
-                Id = 1,
-                FirstName = "Arun",
-                LastName = "Kumar",
-                Email = "arun@example.com",
-                DateOfBirth = new DateOnly(1995, 5, 15),
-                PhoneNumber = "9876543210"
-            },
-            new Patient
-            {
-                Id = 2,
-                FirstName = "Priya",
-                LastName = "Sharma",
-                Email = "priya@example.com",
-                DateOfBirth = new DateOnly(1998, 8, 20),
-                PhoneNumber = "9876543211"
-            }
-        };
+            _context = context;
+        }
 
         public List<PatientResponseDto> GetAllPatients()
         {
-            return patients.Select(patient => new PatientResponseDto
-            {
-                Id = patient.Id,
-                FirstName = patient.FirstName,
-                LastName = patient.LastName,
-                Email = patient.Email,
-                DateOfBirth = patient.DateOfBirth
-            }).ToList();
+            return _context.Patients
+                .Select(patient => new PatientResponseDto
+                {
+                    Id = patient.Id,
+                    FirstName = patient.FirstName,
+                    LastName = patient.LastName,
+                    Email = patient.Email,
+                    DateOfBirth = patient.DateOfBirth
+                })
+                .ToList();
         }
 
         public PatientResponseDto? GetPatientById(int id)
         {
-            var patient = patients.FirstOrDefault(p => p.Id == id);
+            var patient = _context.Patients
+                .FirstOrDefault(p => p.Id == id);
 
             if (patient == null)
                 return null;
@@ -61,7 +50,6 @@ namespace Healthcare.API.Services
         {
             var patient = new Patient
             {
-                Id = patients.Count == 0 ? 1 : patients.Max(p => p.Id) + 1,
                 FirstName = patientDto.FirstName,
                 LastName = patientDto.LastName,
                 Email = patientDto.Email,
@@ -69,7 +57,8 @@ namespace Healthcare.API.Services
                 PhoneNumber = patientDto.PhoneNumber
             };
 
-            patients.Add(patient);
+            _context.Patients.Add(patient);
+            _context.SaveChanges();
 
             return new PatientResponseDto
             {
@@ -83,7 +72,8 @@ namespace Healthcare.API.Services
 
         public bool UpdatePatient(int id, PatientCreateDto patientDto)
         {
-            var patient = patients.FirstOrDefault(p => p.Id == id);
+            var patient = _context.Patients
+                .FirstOrDefault(p => p.Id == id);
 
             if (patient == null)
                 return false;
@@ -94,17 +84,21 @@ namespace Healthcare.API.Services
             patient.DateOfBirth = patientDto.DateOfBirth;
             patient.PhoneNumber = patientDto.PhoneNumber;
 
+            _context.SaveChanges();
+
             return true;
         }
 
         public bool DeletePatient(int id)
         {
-            var patient = patients.FirstOrDefault(p => p.Id == id);
+            var patient = _context.Patients
+                .FirstOrDefault(p => p.Id == id);
 
             if (patient == null)
                 return false;
 
-            patients.Remove(patient);
+            _context.Patients.Remove(patient);
+            _context.SaveChanges();
 
             return true;
         }
