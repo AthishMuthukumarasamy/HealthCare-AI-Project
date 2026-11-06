@@ -14,5 +14,24 @@ namespace Healthcare.API.Data
         public DbSet<Patient> Patients { get; set; }
 
         public DbSet<Provider> Providers { get; set; }
+
+        public DbSet<Appointment> Appointments { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Patient)
+                .WithMany()
+                .HasForeignKey(a => a.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Provider)
+                .WithMany()
+                .HasForeignKey(a => a.ProviderId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
     }
 }

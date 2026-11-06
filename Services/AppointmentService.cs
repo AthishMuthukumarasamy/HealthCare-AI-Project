@@ -1,0 +1,129 @@
+
+using Healthcare.API.Data;
+using Healthcare.API.DTOs;
+using Healthcare.API.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Healthcare.API.Services
+{
+    public class AppointmentService : IAppointmentService
+    {
+        private readonly HealthcareDbContext _context;
+
+        public AppointmentService(HealthcareDbContext context)
+        {
+            _context = context;
+        }
+
+        public List<AppointmentResponseDto> GetAllAppointments()
+        {
+            return _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Provider)
+                .Select(a => new AppointmentResponseDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient!.FirstName + " " + a.Patient.LastName,
+                    ProviderId = a.ProviderId,
+                    ProviderName = a.Provider!.FirstName + " " + a.Provider.LastName,
+                    AppointmentDate = a.AppointmentDate,
+                    Reason = a.Reason,
+                    Status = a.Status
+                })
+                .ToList();
+        }
+
+        public AppointmentResponseDto? GetAppointmentById(int id)
+        {
+            var appointment = _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Provider)
+                .FirstOrDefault(a => a.Id == id);
+
+            if (appointment == null)
+                return null;
+
+            return new AppointmentResponseDto
+            {
+                Id = appointment.Id,
+                PatientId = appointment.PatientId,
+                PatientName = appointment.Patient!.FirstName + " " + appointment.Patient.LastName,
+                ProviderId = appointment.ProviderId,
+                ProviderName = appointment.Provider!.FirstName + " " + appointment.Provider.LastName,
+                AppointmentDate = appointment.AppointmentDate,
+                Reason = appointment.Reason,
+                Status = appointment.Status
+            };
+        }
+
+        public AppointmentResponseDto CreateAppointment(AppointmentCreateDto appointmentDto)
+        {
+            if (!IsValidAppointment(appointmentDto))
+            {
+                throw new ArgumentException("Invalid appointment details.");
+            }
+
+            var appointment = new Appointment
+            {
+                PatientId = appointmentDto.PatientId,
+                ProviderId = appointmentDto.ProviderId,
+                AppointmentDate = appointmentDto.AppointmentDate,
+                Reason = appointmentDto.Reason,
+                Status = "Scheduled"
+            };
+
+            _context.Appointments.Add(appointment);
+            _context.SaveChanges();
+
+            return GetAppointmentById(appointment.Id)!;
+        }
+
+        public bool UpdateAppointment(int id, AppointmentCreateDto appointmentDto)
+        {
+            var appointment = _context.Appointments
+                .FirstOrDefault(a => a.Id == id);
+
+            if (appointment == null)
+                return false;
+
+            if (!IsValidAppointment(appointmentDto))
+            {
+                throw new ArgumentException("Invalid appointment details.");
+            }
+
+            appointment.PatientId = appointmentDto.PatientId;
+            appointment.ProviderId = appointmentDto.ProviderId;
+            appointment.AppointmentDate = appointmentDto.AppointmentDate;
+            appointment.Reason = appointmentDto.Reason;
+
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        public bool DeleteAppointment(int id)
+        {
+            var appointment = _context.Appointments
+                .FirstOrDefault(a => a.Id == id);
+
+            if (appointment == null)
+                return false;
+
+            _context.Appointments.Remove(appointment);
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        private bool IsValidAppointment(AppointmentCreateDto appointmentDto)
+        {
+            return appointmentDto.PatientId > 0
+                && appointmentDto.ProviderId > 0
+                && appointmentDto.AppointmentDate > DateTime.Now
+                && !string.IsNullOrWhiteSpace(appointmentDto.Reason)
+                && _context.Patients.Any(p => p.Id == appointmentDto.PatientId)
+                && _context.Providers.Any(p => p.Id == appointmentDto.ProviderId);
+        }
+    }
+}
