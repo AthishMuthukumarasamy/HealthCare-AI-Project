@@ -1,3 +1,4 @@
+
 using Healthcare.API.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,5 +12,7 @@ namespace Healthcare.API.Data
         }
 
         public DbSet<Patient> Patients { get; set; }
+
+        public DbSet<Provider> Providers { get; set; }
     }
 }

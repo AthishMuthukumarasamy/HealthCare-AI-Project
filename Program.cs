@@ -13,6 +13,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IPatientService, PatientService>();
 
+builder.Services.AddScoped<IProviderService, ProviderService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
