@@ -17,6 +17,8 @@ namespace Healthcare.API.Data
 
         public DbSet<Appointment> Appointments { get; set; }
 
+        public DbSet<MedicalRecord> MedicalRecords { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -31,6 +33,12 @@ namespace Healthcare.API.Data
                 .HasOne(a => a.Provider)
                 .WithMany()
                 .HasForeignKey(a => a.ProviderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MedicalRecord>()
+                .HasOne(m => m.Patient)
+                .WithMany()
+                .HasForeignKey(m => m.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

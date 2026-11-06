@@ -56,6 +56,39 @@ namespace Healthcare.API.Migrations
                     b.ToTable("Appointments");
                 });
 
+            modelBuilder.Entity("Healthcare.API.Models.MedicalRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Diagnosis")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RecordDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Treatment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("MedicalRecords");
+                });
+
             modelBuilder.Entity("Healthcare.API.Models.Patient", b =>
                 {
                     b.Property<int>("Id")
@@ -144,6 +177,17 @@ namespace Healthcare.API.Migrations
                     b.Navigation("Patient");
 
                     b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("Healthcare.API.Models.MedicalRecord", b =>
+                {
+                    b.HasOne("Healthcare.API.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
                 });
 #pragma warning restore 612, 618
         }
