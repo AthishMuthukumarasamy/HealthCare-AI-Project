@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Healthcare.API.Controllers
 {
@@ -167,5 +168,21 @@ namespace Healthcare.API.Controllers
                 roles = roles
             });
         }
+
+        [Authorize]
+[HttpGet("profile")]
+public IActionResult GetProfile()
+{
+    return Ok(new
+    {
+        message = "You are authenticated!",
+        userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+        name = User.Identity?.Name,
+        email = User.FindFirst(ClaimTypes.Email)?.Value,
+        roles = User.FindAll(ClaimTypes.Role)
+            .Select(r => r.Value)
+    });
+}
+
     }
 }
