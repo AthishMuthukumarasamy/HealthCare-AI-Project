@@ -1,4 +1,3 @@
-
 using System.ComponentModel.DataAnnotations;
 
 namespace Healthcare.API.DTOs
@@ -29,6 +28,7 @@ namespace Healthcare.API.DTOs
         public DateOnly DateOfBirth { get; set; }
 
         [Phone]
+        [StringLength(20)]
         public string? PhoneNumber { get; set; }
     }
 }

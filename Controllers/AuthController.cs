@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -35,6 +36,21 @@ namespace Healthcare.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            // Validate date of birth.
+            if (dto.DateOfBirth == default ||
+                dto.DateOfBirth > DateOnly.FromDateTime(DateTime.Today))
+            {
+                return BadRequest(new
+                {
+                    message = "Please provide a valid date of birth."
+                });
+            }
+
             var existingUser =
                 await _userManager.FindByEmailAsync(dto.Email);
 
@@ -46,18 +62,7 @@ namespace Healthcare.API.Controllers
                 });
             }
 
-            // Validate that the date of birth is provided
-            // and is not in the future.
-            if (dto.DateOfBirth == default ||
-                dto.DateOfBirth > DateOnly.FromDateTime(DateTime.Today))
-            {
-                return BadRequest(new
-                {
-                    message = "Please provide a valid date of birth."
-                });
-            }
-
-            // Start a transaction so both records are saved together.
+            // Start transaction for Identity and Patient records.
             await using var transaction =
                 await _context.Database.BeginTransactionAsync();
 
@@ -65,9 +70,9 @@ namespace Healthcare.API.Controllers
             {
                 var user = new ApplicationUser
                 {
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    UserName = dto.Email
+                    FullName = dto.FullName.Trim(),
+                    Email = dto.Email.Trim(),
+                    UserName = dto.Email.Trim()
                 };
 
                 // Identity securely hashes the password.
@@ -95,21 +100,18 @@ namespace Healthcare.API.Controllers
 
                     return StatusCode(500, new
                     {
-                        message = "Unable to assign the Patient role.",
-                        errors = roleResult.Errors.Select(
-                            e => e.Description)
+                        message = "Unable to assign the Patient role."
                     });
                 }
 
-                // Create the Patient profile and link it
-                // to the newly created Identity account.
+                // Create and link Patient profile.
                 var patient = new Patient
                 {
-                    FirstName = dto.FirstName,
-                    LastName = dto.LastName,
-                    Email = dto.Email,
+                    FirstName = dto.FirstName.Trim(),
+                    LastName = dto.LastName.Trim(),
+                    Email = dto.Email.Trim(),
                     DateOfBirth = dto.DateOfBirth,
-                    PhoneNumber = dto.PhoneNumber,
+                    PhoneNumber = dto.PhoneNumber?.Trim(),
                     ApplicationUserId = user.Id
                 };
 
@@ -117,7 +119,6 @@ namespace Healthcare.API.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // Commit both Identity and Patient records.
                 await transaction.CommitAsync();
 
                 return Ok(new
@@ -145,6 +146,11 @@ namespace Healthcare.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
             var user = await _userManager.FindByEmailAsync(
                 dto.Email);
 
@@ -158,8 +164,42 @@ namespace Healthcare.API.Controllers
                 });
             }
 
-            // Retrieve the user's assigned roles.
+            // Retrieve assigned roles.
             var roles = await _userManager.GetRolesAsync(user);
+
+            // Read JWT configuration.
+            var jwtKey = _configuration["Jwt:Key"];
+            var jwtIssuer = _configuration["Jwt:Issuer"];
+            var jwtAudience = _configuration["Jwt:Audience"];
+
+            if (string.IsNullOrWhiteSpace(jwtKey) ||
+                string.IsNullOrWhiteSpace(jwtIssuer) ||
+                string.IsNullOrWhiteSpace(jwtAudience) ||
+                Encoding.UTF8.GetByteCount(jwtKey) < 32)
+            {
+                return StatusCode(500, new
+                {
+                    message = "JWT configuration is invalid."
+                });
+            }
+
+            // Validate token duration.
+            var durationSetting =
+                _configuration["Jwt:DurationInMinutes"];
+
+            if (!double.TryParse(
+                    durationSetting,
+                    NumberStyles.Number,
+                    CultureInfo.InvariantCulture,
+                    out var duration) ||
+                duration <= 0 ||
+                duration > 1440)
+            {
+                return StatusCode(500, new
+                {
+                    message = "JWT duration configuration is invalid."
+                });
+            }
 
             // Create JWT claims.
             var claims = new List<Claim>
@@ -180,14 +220,6 @@ namespace Healthcare.API.Controllers
                     ClaimTypes.Role, role));
             }
 
-            // Get JWT settings.
-            var jwtKey = _configuration["Jwt:Key"]
-                ?? throw new InvalidOperationException(
-                    "JWT key is missing.");
-
-            var jwtIssuer = _configuration["Jwt:Issuer"];
-            var jwtAudience = _configuration["Jwt:Audience"];
-
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey));
 
@@ -196,10 +228,8 @@ namespace Healthcare.API.Controllers
                 SecurityAlgorithms.HmacSha256);
 
             // Set token expiration.
-            var duration = double.Parse(
-                _configuration["Jwt:DurationInMinutes"] ?? "30");
-
-            var expiration = DateTime.UtcNow.AddMinutes(duration);
+            var expiration =
+                DateTime.UtcNow.AddMinutes(duration);
 
             // Generate JWT token.
             var token = new JwtSecurityToken(
@@ -233,6 +263,7 @@ namespace Healthcare.API.Controllers
             return Ok(new
             {
                 message = "You are authenticated!",
+
                 userId = User.FindFirst(
                     ClaimTypes.NameIdentifier)?.Value,
 
