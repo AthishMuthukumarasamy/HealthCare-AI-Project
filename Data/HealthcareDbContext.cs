@@ -41,6 +41,12 @@ namespace Healthcare.API.Data
                 .WithMany()
                 .HasForeignKey(m => m.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Provider>()
+                .HasOne(p => p.ApplicationUser)
+                .WithOne()
+                .HasForeignKey<Provider>(p => p.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

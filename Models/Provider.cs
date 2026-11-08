@@ -28,5 +28,10 @@ namespace Healthcare.API.Models
 
         [Range(0, 60)]
         public int YearsOfExperience { get; set; }
+
+        // Link to ASP.NET Core Identity Doctor account
+        public string? ApplicationUserId { get; set; }
+
+        public ApplicationUser? ApplicationUser { get; set; }
     }
 }
