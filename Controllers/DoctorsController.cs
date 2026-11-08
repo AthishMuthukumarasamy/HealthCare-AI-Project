@@ -1,9 +1,11 @@
 
 using Healthcare.API.DTOs;
 using Healthcare.API.Models;
+using Healthcare.API.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Healthcare.API.Controllers
 {
@@ -13,11 +15,14 @@ namespace Healthcare.API.Controllers
     public class DoctorsController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly HealthcareDbContext _context;
 
         public DoctorsController(
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            HealthcareDbContext context)
         {
             _userManager = userManager;
+            _context = context;
         }
 
         [HttpPost("register")]
@@ -35,47 +40,88 @@ namespace Healthcare.API.Controllers
                 });
             }
 
-            var doctor = new ApplicationUser
-            {
-                FullName = dto.FullName,
-                Email = dto.Email,
-                UserName = dto.Email,
-                EmailConfirmed = true
-            };
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
 
-            var result = await _userManager.CreateAsync(
-                doctor, dto.Password);
-
-            if (!result.Succeeded)
+            try
             {
-                return BadRequest(new
+                // Create Identity user
+                var doctor = new ApplicationUser
                 {
-                    errors = result.Errors.Select(
-                        e => e.Description)
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    UserName = dto.Email,
+                    EmailConfirmed = true
+                };
+
+                var result = await _userManager.CreateAsync(
+                    doctor, dto.Password);
+
+                if (!result.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+
+                    return BadRequest(new
+                    {
+                        errors = result.Errors.Select(
+                            e => e.Description)
+                    });
+                }
+
+                // Assign Doctor role
+                var roleResult = await _userManager.AddToRoleAsync(
+                    doctor, "Doctor");
+
+                if (!roleResult.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+
+                    return StatusCode(500, new
+                    {
+                        message = "Unable to assign Doctor role.",
+                        errors = roleResult.Errors.Select(
+                            e => e.Description)
+                    });
+                }
+
+                // Create Provider profile and link Identity user
+                var provider = new Provider
+                {
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    Specialization = dto.Specialization,
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    YearsOfExperience = dto.YearsOfExperience,
+                    ApplicationUserId = doctor.Id
+                };
+
+                _context.Providers.Add(provider);
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Doctor registered successfully.",
+                    userId = doctor.Id,
+                    providerId = provider.Id,
+                    fullName = doctor.FullName,
+                    email = doctor.Email,
+                    role = "Doctor",
+                    specialization = provider.Specialization
                 });
             }
-
-            var roleResult = await _userManager.AddToRoleAsync(
-                doctor, "Doctor");
-
-            if (!roleResult.Succeeded)
+            catch (Exception)
             {
-                await _userManager.DeleteAsync(doctor);
+                await transaction.RollbackAsync();
 
                 return StatusCode(500, new
                 {
-                    message = "Unable to assign Doctor role."
+                    message = "Doctor registration failed. No changes were saved."
                 });
             }
-
-            return Ok(new
-            {
-                message = "Doctor registered successfully.",
-                userId = doctor.Id,
-                fullName = doctor.FullName,
-                email = doctor.Email,
-                role = "Doctor"
-            });
         }
     }
 }
