@@ -24,28 +24,39 @@ namespace Healthcare.API.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // Appointment - Patient relationship
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Patient)
                 .WithMany()
                 .HasForeignKey(a => a.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Appointment - Provider relationship
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Provider)
                 .WithMany()
                 .HasForeignKey(a => a.ProviderId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Medical Record - Patient relationship
             modelBuilder.Entity<MedicalRecord>()
                 .HasOne(m => m.Patient)
                 .WithMany()
                 .HasForeignKey(m => m.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Provider - Identity relationship
             modelBuilder.Entity<Provider>()
                 .HasOne(p => p.ApplicationUser)
                 .WithOne()
                 .HasForeignKey<Provider>(p => p.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Patient - Identity relationship
+            modelBuilder.Entity<Patient>()
+                .HasOne(p => p.ApplicationUser)
+                .WithOne()
+                .HasForeignKey<Patient>(p => p.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

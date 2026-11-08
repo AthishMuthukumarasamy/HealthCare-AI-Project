@@ -1,3 +1,4 @@
+
 using System.ComponentModel.DataAnnotations;
 
 namespace Healthcare.API.Models
@@ -22,5 +23,10 @@ namespace Healthcare.API.Models
 
         [Phone]
         public string? PhoneNumber { get; set; }
+
+        // Link to ASP.NET Core Identity Patient account
+        public string? ApplicationUserId { get; set; }
+
+        public ApplicationUser? ApplicationUser { get; set; }
     }
 }

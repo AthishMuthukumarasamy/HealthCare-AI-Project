@@ -166,6 +166,9 @@ namespace Healthcare.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -187,6 +190,10 @@ namespace Healthcare.API.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique()
+                        .HasFilter("[ApplicationUserId] IS NOT NULL");
 
                     b.ToTable("Patients");
                 });
@@ -397,6 +404,16 @@ namespace Healthcare.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("Healthcare.API.Models.Patient", b =>
+                {
+                    b.HasOne("Healthcare.API.Models.ApplicationUser", "ApplicationUser")
+                        .WithOne()
+                        .HasForeignKey("Healthcare.API.Models.Patient", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("Healthcare.API.Models.Provider", b =>
