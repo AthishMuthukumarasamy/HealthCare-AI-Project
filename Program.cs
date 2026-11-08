@@ -81,15 +81,25 @@ using (var scope = app.Services.CreateScope())
 
             if (!result.Succeeded)
             {
-                throw new Exception($"Failed to create role: {role}");
+                throw new Exception(
+                    $"Failed to create role {role}: " +
+                    string.Join(", ",
+                        result.Errors.Select(e => e.Description)));
             }
+
+            Console.WriteLine($"Role created: {role}");
         }
     }
 }
 
 // Bootstrap the first Admin account (Development only)
+Console.WriteLine(
+    $"Current environment: {app.Environment.EnvironmentName}");
+
 if (app.Environment.IsDevelopment())
 {
+    Console.WriteLine("Development Admin bootstrap started.");
+
     using (var scope = app.Services.CreateScope())
     {
         var userManager = scope.ServiceProvider
@@ -101,8 +111,20 @@ if (app.Environment.IsDevelopment())
         var adminPassword = builder.Configuration[
             "BootstrapAdmin:Password"];
 
-        if (!string.IsNullOrWhiteSpace(adminEmail) &&
-            !string.IsNullOrWhiteSpace(adminPassword))
+        Console.WriteLine(
+            $"Bootstrap Admin email: {adminEmail ?? "NULL"}");
+
+        Console.WriteLine(
+            $"Bootstrap Admin password configured: " +
+            $"{!string.IsNullOrWhiteSpace(adminPassword)}");
+
+        if (string.IsNullOrWhiteSpace(adminEmail) ||
+            string.IsNullOrWhiteSpace(adminPassword))
+        {
+            Console.WriteLine(
+                "Admin bootstrap skipped: configuration is missing.");
+        }
+        else
         {
             var adminUser = await userManager
                 .FindByEmailAsync(adminEmail);
@@ -127,6 +149,12 @@ if (app.Environment.IsDevelopment())
                         string.Join(", ",
                             result.Errors.Select(e => e.Description)));
                 }
+
+                Console.WriteLine("Admin account created successfully.");
+            }
+            else
+            {
+                Console.WriteLine("Admin account already exists.");
             }
 
             if (!await userManager.IsInRoleAsync(
@@ -138,8 +166,16 @@ if (app.Environment.IsDevelopment())
                 if (!roleResult.Succeeded)
                 {
                     throw new Exception(
-                        "Failed to assign Admin role.");
+                        "Failed to assign Admin role: " +
+                        string.Join(", ",
+                            roleResult.Errors.Select(e => e.Description)));
                 }
+
+                Console.WriteLine("Admin role assigned successfully.");
+            }
+            else
+            {
+                Console.WriteLine("Admin already has the Admin role.");
             }
         }
     }
