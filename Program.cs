@@ -87,6 +87,64 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Bootstrap the first Admin account (Development only)
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var userManager = scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+
+        var adminEmail = builder.Configuration[
+            "BootstrapAdmin:Email"];
+
+        var adminPassword = builder.Configuration[
+            "BootstrapAdmin:Password"];
+
+        if (!string.IsNullOrWhiteSpace(adminEmail) &&
+            !string.IsNullOrWhiteSpace(adminPassword))
+        {
+            var adminUser = await userManager
+                .FindByEmailAsync(adminEmail);
+
+            if (adminUser == null)
+            {
+                adminUser = new ApplicationUser
+                {
+                    FullName = "System Administrator",
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true
+                };
+
+                var result = await userManager.CreateAsync(
+                    adminUser, adminPassword);
+
+                if (!result.Succeeded)
+                {
+                    throw new Exception(
+                        "Failed to create bootstrap Admin account: " +
+                        string.Join(", ",
+                            result.Errors.Select(e => e.Description)));
+                }
+            }
+
+            if (!await userManager.IsInRoleAsync(
+                adminUser, "Admin"))
+            {
+                var roleResult = await userManager.AddToRoleAsync(
+                    adminUser, "Admin");
+
+                if (!roleResult.Succeeded)
+                {
+                    throw new Exception(
+                        "Failed to assign Admin role.");
+                }
+            }
+        }
+    }
+}
+
 // HTTP Pipeline
 if (app.Environment.IsDevelopment())
 {
