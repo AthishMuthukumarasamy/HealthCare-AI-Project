@@ -105,7 +105,8 @@ namespace Healthcare.API.Services
 
         public bool UpdateAppointmentStatus(int id, string status)
         {
-            if (!Enum.TryParse<AppointmentStatus>(status, true, out var parsedStatus)
+            if (!Enum.TryParse<AppointmentStatus>(
+                    status, true, out var parsedStatus)
                 || !Enum.IsDefined(typeof(AppointmentStatus), parsedStatus))
             {
                 throw new ArgumentException("Invalid appointment status.");
@@ -116,6 +117,25 @@ namespace Healthcare.API.Services
 
             if (appointment == null)
                 return false;
+
+            bool isValidTransition = appointment.Status switch
+            {
+                nameof(AppointmentStatus.Scheduled) =>
+                    parsedStatus == AppointmentStatus.Confirmed ||
+                    parsedStatus == AppointmentStatus.Cancelled,
+
+                nameof(AppointmentStatus.Confirmed) =>
+                    parsedStatus == AppointmentStatus.Completed ||
+                    parsedStatus == AppointmentStatus.Cancelled,
+
+                _ => false
+            };
+
+            if (!isValidTransition)
+            {
+                throw new ArgumentException(
+                    $"Cannot change appointment status from {appointment.Status} to {parsedStatus}.");
+            }
 
             appointment.Status = parsedStatus.ToString();
 
