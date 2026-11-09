@@ -1,5 +1,6 @@
 
 using System.ComponentModel.DataAnnotations;
+using Healthcare.API.Enums;
 
 namespace Healthcare.API.Models
 {
@@ -20,7 +21,8 @@ namespace Healthcare.API.Models
         public string Reason { get; set; } = string.Empty;
 
         [Required]
-        public string Status { get; set; } = "Scheduled";
+        public string Status { get; set; } =
+            AppointmentStatus.Scheduled.ToString();
 
         // Navigation properties
         public Patient? Patient { get; set; }

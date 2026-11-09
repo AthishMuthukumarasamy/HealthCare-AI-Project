@@ -147,7 +147,7 @@ namespace Healthcare.API.Controllers
             }
         }
 
-        // Admin only: Update appointment
+        // Admin only: Update appointment details
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
         public IActionResult UpdateAppointment(
@@ -163,6 +163,33 @@ namespace Healthcare.API.Controllers
                     return NotFound();
 
                 return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Admin only: Update appointment status
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult UpdateAppointmentStatus(
+            int id,
+            AppointmentStatusUpdateDto statusDto)
+        {
+            try
+            {
+                var updated = _appointmentService
+                    .UpdateAppointmentStatus(id, statusDto.Status);
+
+                if (!updated)
+                    return NotFound();
+
+                return Ok(new
+                {
+                    message = "Appointment status updated successfully.",
+                    status = statusDto.Status
+                });
             }
             catch (ArgumentException ex)
             {

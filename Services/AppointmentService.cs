@@ -1,6 +1,7 @@
 
 using Healthcare.API.Data;
 using Healthcare.API.DTOs;
+using Healthcare.API.Enums;
 using Healthcare.API.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,7 +71,7 @@ namespace Healthcare.API.Services
                 ProviderId = appointmentDto.ProviderId,
                 AppointmentDate = appointmentDto.AppointmentDate,
                 Reason = appointmentDto.Reason.Trim(),
-                Status = "Scheduled"
+                Status = AppointmentStatus.Scheduled.ToString()
             };
 
             _context.Appointments.Add(appointment);
@@ -96,6 +97,27 @@ namespace Healthcare.API.Services
             appointment.ProviderId = appointmentDto.ProviderId;
             appointment.AppointmentDate = appointmentDto.AppointmentDate;
             appointment.Reason = appointmentDto.Reason.Trim();
+
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        public bool UpdateAppointmentStatus(int id, string status)
+        {
+            if (!Enum.TryParse<AppointmentStatus>(status, true, out var parsedStatus)
+                || !Enum.IsDefined(typeof(AppointmentStatus), parsedStatus))
+            {
+                throw new ArgumentException("Invalid appointment status.");
+            }
+
+            var appointment = _context.Appointments
+                .FirstOrDefault(a => a.Id == id);
+
+            if (appointment == null)
+                return false;
+
+            appointment.Status = parsedStatus.ToString();
 
             _context.SaveChanges();
 

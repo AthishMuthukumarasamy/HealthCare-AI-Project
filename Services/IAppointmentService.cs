@@ -13,6 +13,8 @@ namespace Healthcare.API.Services
 
         bool UpdateAppointment(int id, AppointmentCreateDto appointmentDto);
 
+        bool UpdateAppointmentStatus(int id, string status);
+
         bool DeleteAppointment(int id);
     }
 }
