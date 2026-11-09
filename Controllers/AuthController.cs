@@ -21,15 +21,18 @@ namespace Healthcare.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly HealthcareDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             HealthcareDbContext context,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
         // Patient Registration
@@ -40,6 +43,8 @@ namespace Healthcare.API.Controllers
             {
                 return ValidationProblem(ModelState);
             }
+
+            var email = dto.Email.Trim();
 
             // Validate date of birth.
             if (dto.DateOfBirth == default ||
@@ -52,7 +57,7 @@ namespace Healthcare.API.Controllers
             }
 
             var existingUser =
-                await _userManager.FindByEmailAsync(dto.Email);
+                await _userManager.FindByEmailAsync(email);
 
             if (existingUser != null)
             {
@@ -71,8 +76,8 @@ namespace Healthcare.API.Controllers
                 var user = new ApplicationUser
                 {
                     FullName = dto.FullName.Trim(),
-                    Email = dto.Email.Trim(),
-                    UserName = dto.Email.Trim()
+                    Email = email,
+                    UserName = email
                 };
 
                 // Identity securely hashes the password.
@@ -98,6 +103,9 @@ namespace Healthcare.API.Controllers
                 {
                     await transaction.RollbackAsync();
 
+                    _logger.LogError(
+                        "Failed to assign Patient role during registration.");
+
                     return StatusCode(500, new
                     {
                         message = "Unable to assign the Patient role."
@@ -109,7 +117,7 @@ namespace Healthcare.API.Controllers
                 {
                     FirstName = dto.FirstName.Trim(),
                     LastName = dto.LastName.Trim(),
-                    Email = dto.Email.Trim(),
+                    Email = email,
                     DateOfBirth = dto.DateOfBirth,
                     PhoneNumber = dto.PhoneNumber?.Trim(),
                     ApplicationUserId = user.Id
@@ -131,9 +139,23 @@ namespace Healthcare.API.Controllers
                     role = "Patient"
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                _logger.LogError(
+                    ex,
+                    "Patient registration failed for email {Email}.",
+                    email);
+
+                try
+                {
+                    await transaction.RollbackAsync();
+                }
+                catch (Exception rollbackException)
+                {
+                    _logger.LogError(
+                        rollbackException,
+                        "Failed to roll back patient registration transaction.");
+                }
 
                 return StatusCode(500, new
                 {
@@ -151,8 +173,9 @@ namespace Healthcare.API.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var user = await _userManager.FindByEmailAsync(
-                dto.Email);
+            var email = dto.Email.Trim();
+
+            var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null ||
                 !await _userManager.CheckPasswordAsync(
@@ -177,6 +200,9 @@ namespace Healthcare.API.Controllers
                 string.IsNullOrWhiteSpace(jwtAudience) ||
                 Encoding.UTF8.GetByteCount(jwtKey) < 32)
             {
+                _logger.LogError(
+                    "JWT configuration is missing or invalid.");
+
                 return StatusCode(500, new
                 {
                     message = "JWT configuration is invalid."
@@ -195,6 +221,9 @@ namespace Healthcare.API.Controllers
                 duration <= 0 ||
                 duration > 1440)
             {
+                _logger.LogError(
+                    "JWT duration configuration is invalid.");
+
                 return StatusCode(500, new
                 {
                     message = "JWT duration configuration is invalid."
