@@ -83,7 +83,6 @@ namespace Healthcare.API.Controllers
 
             var patient = _patientService.CreatePatient(patientDto);
 
-            // Service already returns PatientResponseDto.
             return CreatedAtAction(
                 nameof(GetPatientById),
                 new { id = patient.Id },
@@ -97,7 +96,7 @@ namespace Healthcare.API.Controllers
         [Authorize(Roles = "Admin,Patient")]
         public async Task<IActionResult> UpdatePatient(
             int id,
-            PatientCreateDto patientDto)
+            PatientUpdateDto patientDto)
         {
             if (id <= 0)
             {
@@ -142,8 +141,8 @@ namespace Healthcare.API.Controllers
             patient.DateOfBirth = patientDto.DateOfBirth;
             patient.PhoneNumber = patientDto.PhoneNumber?.Trim();
 
-            // Email changes are intentionally handled separately
-            // through a verified Identity email-change workflow.
+            // Email changes are handled separately through
+            // a verified Identity email-change workflow.
 
             try
             {
