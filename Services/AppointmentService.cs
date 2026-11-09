@@ -69,7 +69,7 @@ namespace Healthcare.API.Services
                 PatientId = appointmentDto.PatientId,
                 ProviderId = appointmentDto.ProviderId,
                 AppointmentDate = appointmentDto.AppointmentDate,
-                Reason = appointmentDto.Reason,
+                Reason = appointmentDto.Reason.Trim(),
                 Status = "Scheduled"
             };
 
@@ -95,7 +95,7 @@ namespace Healthcare.API.Services
             appointment.PatientId = appointmentDto.PatientId;
             appointment.ProviderId = appointmentDto.ProviderId;
             appointment.AppointmentDate = appointmentDto.AppointmentDate;
-            appointment.Reason = appointmentDto.Reason;
+            appointment.Reason = appointmentDto.Reason.Trim();
 
             _context.SaveChanges();
 
@@ -120,8 +120,11 @@ namespace Healthcare.API.Services
         {
             return appointmentDto.PatientId > 0
                 && appointmentDto.ProviderId > 0
+                && appointmentDto.AppointmentDate != default
                 && appointmentDto.AppointmentDate > DateTime.Now
                 && !string.IsNullOrWhiteSpace(appointmentDto.Reason)
+                && appointmentDto.Reason.Trim().Length >= 3
+                && appointmentDto.Reason.Trim().Length <= 500
                 && _context.Patients.Any(p => p.Id == appointmentDto.PatientId)
                 && _context.Providers.Any(p => p.Id == appointmentDto.ProviderId);
         }
