@@ -27,7 +27,12 @@ namespace Healthcare.API.Services
                     RecordDate = m.RecordDate,
                     Diagnosis = m.Diagnosis,
                     Treatment = m.Treatment,
-                    Notes = m.Notes
+                    Notes = m.Notes,
+
+                    CreatedBy = m.CreatedBy,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedBy = m.UpdatedBy,
+                    UpdatedAt = m.UpdatedAt
                 })
                 .ToList();
         }
@@ -49,7 +54,12 @@ namespace Healthcare.API.Services
                 RecordDate = record.RecordDate,
                 Diagnosis = record.Diagnosis,
                 Treatment = record.Treatment,
-                Notes = record.Notes
+                Notes = record.Notes,
+
+                CreatedBy = record.CreatedBy,
+                CreatedAt = record.CreatedAt,
+                UpdatedBy = record.UpdatedBy,
+                UpdatedAt = record.UpdatedAt
             };
         }
 
@@ -66,7 +76,12 @@ namespace Healthcare.API.Services
                     RecordDate = m.RecordDate,
                     Diagnosis = m.Diagnosis,
                     Treatment = m.Treatment,
-                    Notes = m.Notes
+                    Notes = m.Notes,
+
+                    CreatedBy = m.CreatedBy,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedBy = m.UpdatedBy,
+                    UpdatedAt = m.UpdatedAt
                 })
                 .ToList();
         }

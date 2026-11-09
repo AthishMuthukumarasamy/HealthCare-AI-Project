@@ -1,4 +1,3 @@
-
 namespace Healthcare.API.DTOs
 {
     public class MedicalRecordResponseDto
@@ -16,5 +15,14 @@ namespace Healthcare.API.DTOs
         public string? Treatment { get; set; }
 
         public string? Notes { get; set; }
+
+        // Audit properties
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime CreatedAt { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
     }
 }
