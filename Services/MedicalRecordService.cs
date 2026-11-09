@@ -71,7 +71,9 @@ namespace Healthcare.API.Services
                 .ToList();
         }
 
-        public MedicalRecordResponseDto CreateMedicalRecord(MedicalRecordCreateDto recordDto)
+        public MedicalRecordResponseDto CreateMedicalRecord(
+            MedicalRecordCreateDto recordDto,
+            string userId)
         {
             if (!IsValidMedicalRecord(recordDto))
             {
@@ -82,9 +84,12 @@ namespace Healthcare.API.Services
             {
                 PatientId = recordDto.PatientId,
                 RecordDate = recordDto.RecordDate,
-                Diagnosis = recordDto.Diagnosis,
-                Treatment = recordDto.Treatment,
-                Notes = recordDto.Notes
+                Diagnosis = recordDto.Diagnosis.Trim(),
+                Treatment = recordDto.Treatment?.Trim(),
+                Notes = recordDto.Notes?.Trim(),
+
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.MedicalRecords.Add(record);
@@ -93,7 +98,10 @@ namespace Healthcare.API.Services
             return GetMedicalRecordById(record.Id)!;
         }
 
-        public bool UpdateMedicalRecord(int id, MedicalRecordCreateDto recordDto)
+        public bool UpdateMedicalRecord(
+            int id,
+            MedicalRecordCreateDto recordDto,
+            string userId)
         {
             var record = _context.MedicalRecords
                 .FirstOrDefault(m => m.Id == id);
@@ -108,9 +116,12 @@ namespace Healthcare.API.Services
 
             record.PatientId = recordDto.PatientId;
             record.RecordDate = recordDto.RecordDate;
-            record.Diagnosis = recordDto.Diagnosis;
-            record.Treatment = recordDto.Treatment;
-            record.Notes = recordDto.Notes;
+            record.Diagnosis = recordDto.Diagnosis.Trim();
+            record.Treatment = recordDto.Treatment?.Trim();
+            record.Notes = recordDto.Notes?.Trim();
+
+            record.UpdatedBy = userId;
+            record.UpdatedAt = DateTime.UtcNow;
 
             _context.SaveChanges();
 
@@ -134,9 +145,17 @@ namespace Healthcare.API.Services
         private bool IsValidMedicalRecord(MedicalRecordCreateDto recordDto)
         {
             return recordDto.PatientId > 0
+                && recordDto.RecordDate > DateTime.MinValue
                 && recordDto.RecordDate <= DateTime.Now
                 && !string.IsNullOrWhiteSpace(recordDto.Diagnosis)
-                && _context.Patients.Any(p => p.Id == recordDto.PatientId);
+                && recordDto.Diagnosis.Trim().Length >= 2
+                && recordDto.Diagnosis.Length <= 200
+                && (recordDto.Treatment == null ||
+                    recordDto.Treatment.Length <= 500)
+                && (recordDto.Notes == null ||
+                    recordDto.Notes.Length <= 2000)
+                && _context.Patients.Any(p =>
+                    p.Id == recordDto.PatientId);
         }
     }
 }

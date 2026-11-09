@@ -11,9 +11,14 @@ namespace Healthcare.API.Services
 
         List<MedicalRecordResponseDto> GetMedicalRecordsByPatientId(int patientId);
 
-        MedicalRecordResponseDto CreateMedicalRecord(MedicalRecordCreateDto recordDto);
+        MedicalRecordResponseDto CreateMedicalRecord(
+            MedicalRecordCreateDto recordDto,
+            string userId);
 
-        bool UpdateMedicalRecord(int id, MedicalRecordCreateDto recordDto);
+        bool UpdateMedicalRecord(
+            int id,
+            MedicalRecordCreateDto recordDto,
+            string userId);
 
         bool DeleteMedicalRecord(int id);
     }

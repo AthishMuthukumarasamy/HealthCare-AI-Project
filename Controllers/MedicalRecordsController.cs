@@ -52,8 +52,11 @@ namespace Healthcare.API.Controllers
 
             if (!User.IsInRole("Admin"))
             {
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var hasAccess = await HasRecordAccess(
-                    record.PatientId, userId!);
+                    record.PatientId, userId);
 
                 if (!hasAccess)
                     return NotFound();
@@ -78,8 +81,11 @@ namespace Healthcare.API.Controllers
 
             if (!User.IsInRole("Admin"))
             {
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var hasAccess = await HasRecordAccess(
-                    patientId, userId!);
+                    patientId, userId);
 
                 if (!hasAccess)
                     return NotFound();
@@ -100,9 +106,15 @@ namespace Healthcare.API.Controllers
         {
             try
             {
+                var userId = User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var record =
                     _medicalRecordService.CreateMedicalRecord(
-                        recordDto);
+                        recordDto, userId);
 
                 return CreatedAtAction(
                     nameof(GetMedicalRecordById),
@@ -124,9 +136,15 @@ namespace Healthcare.API.Controllers
         {
             try
             {
+                var userId = User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var updated =
                     _medicalRecordService.UpdateMedicalRecord(
-                        id, recordDto);
+                        id, recordDto, userId);
 
                 if (!updated)
                     return NotFound();
@@ -167,9 +185,8 @@ namespace Healthcare.API.Controllers
                     p.ApplicationUserId == userId);
             }
 
-            // Doctor can access records only when
-            // the patient has an appointment assigned
-            // to that doctor's Provider profile.
+            // Doctor can access records when an appointment
+            // exists with the patient, regardless of status.
             if (User.IsInRole("Doctor"))
             {
                 return await _context.Appointments.AnyAsync(a =>

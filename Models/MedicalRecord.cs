@@ -22,6 +22,17 @@ namespace Healthcare.API.Models
 
         public string? Notes { get; set; }
 
+        // Audit properties
+        [Required]
+        public string CreatedBy { get; set; } = string.Empty;
+
+        [Required]
+        public DateTime CreatedAt { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+
         // Navigation property
         public Patient? Patient { get; set; }
     }
