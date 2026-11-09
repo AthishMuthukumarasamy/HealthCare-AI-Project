@@ -70,7 +70,7 @@ namespace Healthcare.API.Services
             };
         }
 
-        public bool UpdatePatient(int id, PatientCreateDto patientDto)
+        public bool UpdatePatient(int id, PatientUpdateDto patientDto)
         {
             var patient = _context.Patients
                 .FirstOrDefault(p => p.Id == id);
@@ -80,9 +80,11 @@ namespace Healthcare.API.Services
 
             patient.FirstName = patientDto.FirstName;
             patient.LastName = patientDto.LastName;
-            patient.Email = patientDto.Email;
             patient.DateOfBirth = patientDto.DateOfBirth;
             patient.PhoneNumber = patientDto.PhoneNumber;
+
+            // Email is intentionally not updated here.
+            // Email changes should use a verified Identity email-change flow.
 
             _context.SaveChanges();
 

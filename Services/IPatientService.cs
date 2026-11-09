@@ -1,3 +1,4 @@
+
 using Healthcare.API.DTOs;
 
 namespace Healthcare.API.Services
@@ -10,7 +11,7 @@ namespace Healthcare.API.Services
 
         PatientResponseDto CreatePatient(PatientCreateDto patientDto);
 
-        bool UpdatePatient(int id, PatientCreateDto patientDto);
+        bool UpdatePatient(int id, PatientUpdateDto patientDto);
 
         bool DeletePatient(int id);
     }
