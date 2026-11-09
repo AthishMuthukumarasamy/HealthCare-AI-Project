@@ -16,13 +16,16 @@ namespace Healthcare.API.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly HealthcareDbContext _context;
+        private readonly ILogger<DoctorsController> _logger;
 
         public DoctorsController(
             UserManager<ApplicationUser> userManager,
-            HealthcareDbContext context)
+            HealthcareDbContext context,
+            ILogger<DoctorsController> logger)
         {
             _userManager = userManager;
             _context = context;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -34,11 +37,13 @@ namespace Healthcare.API.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            var email = dto.Email.Trim();
+
             var normalizedEmail =
-                _userManager.NormalizeEmail(dto.Email.Trim());
+                _userManager.NormalizeEmail(email);
 
             var existingUser = await _userManager
-                .FindByEmailAsync(dto.Email.Trim());
+                .FindByEmailAsync(email);
 
             if (existingUser != null)
             {
@@ -56,11 +61,11 @@ namespace Healthcare.API.Controllers
                 var doctor = new ApplicationUser
                 {
                     FullName = dto.FullName.Trim(),
-                    Email = dto.Email.Trim(),
-                    UserName = dto.Email.Trim(),
+                    Email = email,
+                    UserName = email,
                     NormalizedEmail = normalizedEmail,
                     NormalizedUserName =
-                        _userManager.NormalizeName(dto.Email.Trim())
+                        _userManager.NormalizeName(email)
                 };
 
                 var result = await _userManager.CreateAsync(
@@ -95,7 +100,7 @@ namespace Healthcare.API.Controllers
                     FirstName = dto.FirstName.Trim(),
                     LastName = dto.LastName.Trim(),
                     Specialization = dto.Specialization.Trim(),
-                    Email = dto.Email.Trim(),
+                    Email = email,
                     PhoneNumber = dto.PhoneNumber?.Trim(),
                     YearsOfExperience = dto.YearsOfExperience,
                     ApplicationUserId = doctor.Id
@@ -118,8 +123,13 @@ namespace Healthcare.API.Controllers
                     specialization = provider.Specialization
                 });
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(
+                    ex,
+                    "Doctor registration failed for email {Email}.",
+                    email);
+
                 await transaction.RollbackAsync();
 
                 return StatusCode(500, new
