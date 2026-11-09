@@ -29,8 +29,16 @@ namespace Healthcare.API.Controllers
         public async Task<IActionResult> RegisterDoctor(
             CreateDoctorDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            var normalizedEmail =
+                _userManager.NormalizeEmail(dto.Email.Trim());
+
             var existingUser = await _userManager
-                .FindByEmailAsync(dto.Email);
+                .FindByEmailAsync(dto.Email.Trim());
 
             if (existingUser != null)
             {
@@ -45,13 +53,14 @@ namespace Healthcare.API.Controllers
 
             try
             {
-                // Create Identity user
                 var doctor = new ApplicationUser
                 {
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    UserName = dto.Email,
-                    EmailConfirmed = true
+                    FullName = dto.FullName.Trim(),
+                    Email = dto.Email.Trim(),
+                    UserName = dto.Email.Trim(),
+                    NormalizedEmail = normalizedEmail,
+                    NormalizedUserName =
+                        _userManager.NormalizeName(dto.Email.Trim())
                 };
 
                 var result = await _userManager.CreateAsync(
@@ -68,7 +77,6 @@ namespace Healthcare.API.Controllers
                     });
                 }
 
-                // Assign Doctor role
                 var roleResult = await _userManager.AddToRoleAsync(
                     doctor, "Doctor");
 
@@ -78,20 +86,17 @@ namespace Healthcare.API.Controllers
 
                     return StatusCode(500, new
                     {
-                        message = "Unable to assign Doctor role.",
-                        errors = roleResult.Errors.Select(
-                            e => e.Description)
+                        message = "Unable to assign Doctor role."
                     });
                 }
 
-                // Create Provider profile and link Identity user
                 var provider = new Provider
                 {
-                    FirstName = dto.FirstName,
-                    LastName = dto.LastName,
-                    Specialization = dto.Specialization,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
+                    FirstName = dto.FirstName.Trim(),
+                    LastName = dto.LastName.Trim(),
+                    Specialization = dto.Specialization.Trim(),
+                    Email = dto.Email.Trim(),
+                    PhoneNumber = dto.PhoneNumber?.Trim(),
                     YearsOfExperience = dto.YearsOfExperience,
                     ApplicationUserId = doctor.Id
                 };
@@ -113,7 +118,7 @@ namespace Healthcare.API.Controllers
                     specialization = provider.Specialization
                 });
             }
-            catch (Exception)
+            catch
             {
                 await transaction.RollbackAsync();
 
