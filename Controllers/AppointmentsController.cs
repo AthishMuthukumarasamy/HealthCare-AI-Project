@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Healthcare.API.Data;
 using Healthcare.API.DTOs;
+using Healthcare.API.Models;
 using Healthcare.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -77,52 +78,103 @@ namespace Healthcare.API.Controllers
             });
         }
 
-        // Admin, Patient or Doctor: View appointments assigned to them
+        // Admin, Patient or Doctor: View their appointments with pagination
         [HttpGet("my")]
         [Authorize(Roles = "Admin,Patient,Doctor")]
-        public async Task<IActionResult> GetMyAppointments()
+        public async Task<IActionResult> GetMyAppointments(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            if (User.IsInRole("Admin"))
+            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
-                return Ok(_appointmentService.GetAllAppointments());
+                return BadRequest(new
+                {
+                    message = "Page number must be at least 1 and page size must be between 1 and 100."
+                });
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var query = _context.Appointments
+                .AsNoTracking();
 
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-
+            // Patient: Only their own appointments
             if (User.IsInRole("Patient"))
             {
+                var userId = User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var patient = await _context.Patients
-                    .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        p => p.ApplicationUserId == userId);
 
                 if (patient == null)
                     return NotFound();
 
-                var appointments = _appointmentService
-                    .GetAllAppointments()
-                    .Where(a => a.PatientId == patient.Id);
-
-                return Ok(appointments);
+                query = query.Where(
+                    a => a.PatientId == patient.Id);
             }
-
-            if (User.IsInRole("Doctor"))
+            // Doctor: Only appointments assigned to them
+            else if (User.IsInRole("Doctor"))
             {
+                var userId = User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
                 var provider = await _context.Providers
-                    .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        p => p.ApplicationUserId == userId);
 
                 if (provider == null)
                     return NotFound();
 
-                var appointments = _appointmentService
-                    .GetAllAppointments()
-                    .Where(a => a.ProviderId == provider.Id);
-
-                return Ok(appointments);
+                query = query.Where(
+                    a => a.ProviderId == provider.Id);
+            }
+            // Admin: No filter, so all appointments are visible
+            else if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
             }
 
-            return Forbid();
+            query = query.OrderBy(a => a.Id);
+
+            var totalRecords = await query.CountAsync();
+
+            var appointments = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(a => new AppointmentResponseDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient != null
+                        ? a.Patient.FirstName + " " + a.Patient.LastName
+                        : string.Empty,
+                    ProviderId = a.ProviderId,
+                    ProviderName = a.Provider != null
+                        ? a.Provider.FirstName + " " + a.Provider.LastName
+                        : string.Empty,
+                    AppointmentDate = a.AppointmentDate,
+                    Reason = a.Reason,
+                    Status = a.Status
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                pageNumber,
+                pageSize,
+                totalRecords,
+                totalPages = (int)Math.Ceiling(
+                    (double)totalRecords / pageSize),
+                appointments
+            });
         }
 
         // Admin, Patient or Doctor: View one appointment if authorized
@@ -138,7 +190,8 @@ namespace Healthcare.API.Controllers
             if (User.IsInRole("Admin"))
                 return Ok(appointment);
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
