@@ -33,6 +33,23 @@ namespace Healthcare.API.Controllers
             return Ok(_medicalRecordService.GetAllMedicalRecords());
         }
 
+        // Admin only: View medical record audit history
+        [HttpGet("{id}/audit-history")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult GetMedicalRecordAuditHistory(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new
+                {
+                    message = "Invalid medical record ID."
+                });
+
+            var auditHistory =
+                _medicalRecordService.GetMedicalRecordAuditHistory(id);
+
+            return Ok(auditHistory);
+        }
+
         // Admin: View any record
         // Patient: View own record
         // Doctor: View records of assigned patients

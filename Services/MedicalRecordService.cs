@@ -86,6 +86,26 @@ namespace Healthcare.API.Services
                 .ToList();
         }
 
+        // GET: Medical Record Audit History
+        public List<MedicalRecordAuditLogResponseDto> GetMedicalRecordAuditHistory(
+            int medicalRecordId)
+        {
+            return _context.MedicalRecordAuditLogs
+                .Where(a => a.OriginalMedicalRecordId == medicalRecordId)
+                .OrderBy(a => a.PerformedAt)
+                .Select(a => new MedicalRecordAuditLogResponseDto
+                {
+                    Id = a.Id,
+                    MedicalRecordId = a.MedicalRecordId,
+                    OriginalMedicalRecordId = a.OriginalMedicalRecordId,
+                    Action = a.Action,
+                    PerformedBy = a.PerformedBy,
+                    PerformedAt = a.PerformedAt,
+                    Changes = a.Changes
+                })
+                .ToList();
+        }
+
         // CREATE: Medical Record with Audit Logging
         public MedicalRecordResponseDto CreateMedicalRecord(
             MedicalRecordCreateDto recordDto,

@@ -11,6 +11,8 @@ namespace Healthcare.API.Services
 
         List<MedicalRecordResponseDto> GetMedicalRecordsByPatientId(int patientId);
 
+        List<MedicalRecordAuditLogResponseDto> GetMedicalRecordAuditHistory(int medicalRecordId);
+
         MedicalRecordResponseDto CreateMedicalRecord(
             MedicalRecordCreateDto recordDto,
             string userId);
