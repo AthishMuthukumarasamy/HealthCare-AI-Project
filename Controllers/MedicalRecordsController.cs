@@ -25,12 +25,57 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin: View all medical records
+        // Admin: View all medical records with pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public IActionResult GetAllMedicalRecords()
+        public async Task<IActionResult> GetAllMedicalRecords(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            return Ok(_medicalRecordService.GetAllMedicalRecords());
+            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+            {
+                return BadRequest(new
+                {
+                    message = "Page number must be at least 1 and page size must be between 1 and 100."
+                });
+            }
+
+            var query = _context.MedicalRecords
+                .AsNoTracking()
+                .OrderBy(m => m.Id);
+
+            var totalRecords = await query.CountAsync();
+
+            var medicalRecords = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(m => new MedicalRecordResponseDto
+                {
+                    Id = m.Id,
+                    PatientId = m.PatientId,
+                    PatientName = m.Patient != null
+                        ? m.Patient.FirstName + " " + m.Patient.LastName
+                        : string.Empty,
+                    RecordDate = m.RecordDate,
+                    Diagnosis = m.Diagnosis,
+                    Treatment = m.Treatment,
+                    Notes = m.Notes,
+                    CreatedBy = m.CreatedBy,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedBy = m.UpdatedBy,
+                    UpdatedAt = m.UpdatedAt
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                pageNumber,
+                pageSize,
+                totalRecords,
+                totalPages = (int)Math.Ceiling(
+                    (double)totalRecords / pageSize),
+                medicalRecords
+            });
         }
 
         // Admin only: View medical record audit history
