@@ -171,6 +171,42 @@ namespace Healthcare.API.Migrations
                     b.ToTable("MedicalRecords");
                 });
 
+            modelBuilder.Entity("Healthcare.API.Models.MedicalRecordAuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Changes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("MedicalRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OriginalMedicalRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedicalRecordId");
+
+                    b.ToTable("MedicalRecordAuditLogs");
+                });
+
             modelBuilder.Entity("Healthcare.API.Models.Patient", b =>
                 {
                     b.Property<int>("Id")
@@ -417,6 +453,16 @@ namespace Healthcare.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("Healthcare.API.Models.MedicalRecordAuditLog", b =>
+                {
+                    b.HasOne("Healthcare.API.Models.MedicalRecord", "MedicalRecord")
+                        .WithMany()
+                        .HasForeignKey("MedicalRecordId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("MedicalRecord");
                 });
 
             modelBuilder.Entity("Healthcare.API.Models.Patient", b =>

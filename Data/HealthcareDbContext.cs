@@ -20,6 +20,8 @@ namespace Healthcare.API.Data
 
         public DbSet<MedicalRecord> MedicalRecords { get; set; }
 
+        public DbSet<MedicalRecordAuditLog> MedicalRecordAuditLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -44,6 +46,13 @@ namespace Healthcare.API.Data
                 .WithMany()
                 .HasForeignKey(m => m.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Medical Record - Audit Log relationship
+            modelBuilder.Entity<MedicalRecordAuditLog>()
+                .HasOne(a => a.MedicalRecord)
+                .WithMany()
+                .HasForeignKey(a => a.MedicalRecordId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Provider - Identity relationship
             modelBuilder.Entity<Provider>()
