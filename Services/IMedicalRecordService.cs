@@ -20,6 +20,6 @@ namespace Healthcare.API.Services
             MedicalRecordCreateDto recordDto,
             string userId);
 
-        bool DeleteMedicalRecord(int id);
+        bool DeleteMedicalRecord(int id, string userId);
     }
 }

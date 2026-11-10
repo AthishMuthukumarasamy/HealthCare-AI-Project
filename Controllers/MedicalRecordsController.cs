@@ -157,13 +157,20 @@ namespace Healthcare.API.Controllers
             }
         }
 
-        // Admin only: Delete medical record
+        // Admin only: Delete medical record with audit logging
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public IActionResult DeleteMedicalRecord(int id)
         {
+            var userId = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
             var deleted =
-                _medicalRecordService.DeleteMedicalRecord(id);
+                _medicalRecordService.DeleteMedicalRecord(
+                    id, userId);
 
             if (!deleted)
                 return NotFound();

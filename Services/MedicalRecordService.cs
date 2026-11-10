@@ -15,6 +15,7 @@ namespace Healthcare.API.Services
             _context = context;
         }
 
+        // GET: All Medical Records
         public List<MedicalRecordResponseDto> GetAllMedicalRecords()
         {
             return _context.MedicalRecords
@@ -28,7 +29,6 @@ namespace Healthcare.API.Services
                     Diagnosis = m.Diagnosis,
                     Treatment = m.Treatment,
                     Notes = m.Notes,
-
                     CreatedBy = m.CreatedBy,
                     CreatedAt = m.CreatedAt,
                     UpdatedBy = m.UpdatedBy,
@@ -37,6 +37,7 @@ namespace Healthcare.API.Services
                 .ToList();
         }
 
+        // GET: Medical Record By ID
         public MedicalRecordResponseDto? GetMedicalRecordById(int id)
         {
             var record = _context.MedicalRecords
@@ -55,7 +56,6 @@ namespace Healthcare.API.Services
                 Diagnosis = record.Diagnosis,
                 Treatment = record.Treatment,
                 Notes = record.Notes,
-
                 CreatedBy = record.CreatedBy,
                 CreatedAt = record.CreatedAt,
                 UpdatedBy = record.UpdatedBy,
@@ -63,6 +63,7 @@ namespace Healthcare.API.Services
             };
         }
 
+        // GET: Medical Records By Patient ID
         public List<MedicalRecordResponseDto> GetMedicalRecordsByPatientId(int patientId)
         {
             return _context.MedicalRecords
@@ -77,7 +78,6 @@ namespace Healthcare.API.Services
                     Diagnosis = m.Diagnosis,
                     Treatment = m.Treatment,
                     Notes = m.Notes,
-
                     CreatedBy = m.CreatedBy,
                     CreatedAt = m.CreatedAt,
                     UpdatedBy = m.UpdatedBy,
@@ -86,6 +86,7 @@ namespace Healthcare.API.Services
                 .ToList();
         }
 
+        // CREATE: Medical Record with Audit Logging
         public MedicalRecordResponseDto CreateMedicalRecord(
             MedicalRecordCreateDto recordDto,
             string userId)
@@ -95,24 +96,49 @@ namespace Healthcare.API.Services
                 throw new ArgumentException("Invalid medical record details.");
             }
 
-            var record = new MedicalRecord
+            using var transaction = _context.Database.BeginTransaction();
+
+            try
             {
-                PatientId = recordDto.PatientId,
-                RecordDate = recordDto.RecordDate,
-                Diagnosis = recordDto.Diagnosis.Trim(),
-                Treatment = recordDto.Treatment?.Trim(),
-                Notes = recordDto.Notes?.Trim(),
+                var record = new MedicalRecord
+                {
+                    PatientId = recordDto.PatientId,
+                    RecordDate = recordDto.RecordDate,
+                    Diagnosis = recordDto.Diagnosis.Trim(),
+                    Treatment = recordDto.Treatment?.Trim(),
+                    Notes = recordDto.Notes?.Trim(),
+                    CreatedBy = userId,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                CreatedBy = userId,
-                CreatedAt = DateTime.UtcNow
-            };
+                _context.MedicalRecords.Add(record);
+                _context.SaveChanges();
 
-            _context.MedicalRecords.Add(record);
-            _context.SaveChanges();
+                var auditLog = new MedicalRecordAuditLog
+                {
+                    MedicalRecordId = record.Id,
+                    OriginalMedicalRecordId = record.Id,
+                    Action = "CREATE",
+                    PerformedBy = userId,
+                    PerformedAt = DateTime.UtcNow,
+                    Changes = "Medical record created."
+                };
 
-            return GetMedicalRecordById(record.Id)!;
+                _context.MedicalRecordAuditLogs.Add(auditLog);
+                _context.SaveChanges();
+
+                transaction.Commit();
+
+                return GetMedicalRecordById(record.Id)!;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
+        // UPDATE: Medical Record with Audit Logging
         public bool UpdateMedicalRecord(
             int id,
             MedicalRecordCreateDto recordDto,
@@ -129,21 +155,65 @@ namespace Healthcare.API.Services
                 throw new ArgumentException("Invalid medical record details.");
             }
 
-            record.PatientId = recordDto.PatientId;
-            record.RecordDate = recordDto.RecordDate;
-            record.Diagnosis = recordDto.Diagnosis.Trim();
-            record.Treatment = recordDto.Treatment?.Trim();
-            record.Notes = recordDto.Notes?.Trim();
+            var changes = new List<string>();
 
-            record.UpdatedBy = userId;
-            record.UpdatedAt = DateTime.UtcNow;
+            if (record.PatientId != recordDto.PatientId)
+                changes.Add("PatientId updated.");
 
-            _context.SaveChanges();
+            if (record.RecordDate != recordDto.RecordDate)
+                changes.Add("RecordDate updated.");
 
-            return true;
+            if (record.Diagnosis != recordDto.Diagnosis.Trim())
+                changes.Add("Diagnosis updated.");
+
+            if (record.Treatment != recordDto.Treatment?.Trim())
+                changes.Add("Treatment updated.");
+
+            if (record.Notes != recordDto.Notes?.Trim())
+                changes.Add("Notes updated.");
+
+            if (changes.Count == 0)
+                return true;
+
+            using var transaction = _context.Database.BeginTransaction();
+
+            try
+            {
+                record.PatientId = recordDto.PatientId;
+                record.RecordDate = recordDto.RecordDate;
+                record.Diagnosis = recordDto.Diagnosis.Trim();
+                record.Treatment = recordDto.Treatment?.Trim();
+                record.Notes = recordDto.Notes?.Trim();
+
+                record.UpdatedBy = userId;
+                record.UpdatedAt = DateTime.UtcNow;
+
+                var auditLog = new MedicalRecordAuditLog
+                {
+                    MedicalRecordId = record.Id,
+                    OriginalMedicalRecordId = record.Id,
+                    Action = "UPDATE",
+                    PerformedBy = userId,
+                    PerformedAt = DateTime.UtcNow,
+                    Changes = string.Join("; ", changes)
+                };
+
+                _context.MedicalRecordAuditLogs.Add(auditLog);
+                _context.SaveChanges();
+
+                transaction.Commit();
+
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
-        public bool DeleteMedicalRecord(int id)
+        // DELETE: Medical Record with Audit Logging
+        public bool DeleteMedicalRecord(int id, string userId)
         {
             var record = _context.MedicalRecords
                 .FirstOrDefault(m => m.Id == id);
@@ -151,12 +221,38 @@ namespace Healthcare.API.Services
             if (record == null)
                 return false;
 
-            _context.MedicalRecords.Remove(record);
-            _context.SaveChanges();
+            using var transaction = _context.Database.BeginTransaction();
 
-            return true;
+            try
+            {
+                var auditLog = new MedicalRecordAuditLog
+                {
+                    MedicalRecordId = record.Id,
+                    OriginalMedicalRecordId = record.Id,
+                    Action = "DELETE",
+                    PerformedBy = userId,
+                    PerformedAt = DateTime.UtcNow,
+                    Changes = "Medical record deleted."
+                };
+
+                _context.MedicalRecordAuditLogs.Add(auditLog);
+                _context.SaveChanges();
+
+                _context.MedicalRecords.Remove(record);
+                _context.SaveChanges();
+
+                transaction.Commit();
+
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
+        // Medical Record Validation
         private bool IsValidMedicalRecord(MedicalRecordCreateDto recordDto)
         {
             return recordDto.PatientId > 0
