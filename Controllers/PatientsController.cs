@@ -29,13 +29,49 @@ namespace Healthcare.API.Controllers
             _logger = logger;
         }
 
-        // Admin: View all patients
+        // Admin: View all patients with pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public IActionResult GetAllPatients()
+        public async Task<IActionResult> GetAllPatients(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var patients = _patientService.GetAllPatients();
-            return Ok(patients);
+            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+            {
+                return BadRequest(new
+                {
+                    message = "Page number must be at least 1 and page size must be between 1 and 100."
+                });
+            }
+
+            var query = _context.Patients
+                .AsNoTracking()
+                .OrderBy(p => p.Id);
+
+            var totalRecords = await query.CountAsync();
+
+            var patients = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new PatientResponseDto
+                {
+                    Id = p.Id,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    Email = p.Email,
+                    DateOfBirth = p.DateOfBirth
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                pageNumber,
+                pageSize,
+                totalRecords,
+                totalPages = (int)Math.Ceiling(
+                    (double)totalRecords / pageSize),
+                patients
+            });
         }
 
         // Admin: View any patient
