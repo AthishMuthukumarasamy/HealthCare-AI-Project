@@ -63,15 +63,17 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new
+            var response = new PagedResponse<PatientResponseDto>
             {
-                pageNumber,
-                pageSize,
-                totalRecords,
-                totalPages = (int)Math.Ceiling(
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                TotalPages = (int)Math.Ceiling(
                     (double)totalRecords / pageSize),
-                patients
-            });
+                Data = patients
+            };
+
+            return Ok(response);
         }
 
         // Admin: View any patient

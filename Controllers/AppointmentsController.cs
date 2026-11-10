@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using Healthcare.API.Data;
 using Healthcare.API.DTOs;
-using Healthcare.API.Models;
 using Healthcare.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,15 +66,17 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new
+            var response = new PagedResponse<AppointmentResponseDto>
             {
-                pageNumber,
-                pageSize,
-                totalRecords,
-                totalPages = (int)Math.Ceiling(
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                TotalPages = (int)Math.Ceiling(
                     (double)totalRecords / pageSize),
-                appointments
-            });
+                Data = appointments
+            };
+
+            return Ok(response);
         }
 
         // Admin, Patient or Doctor: View their appointments with pagination
@@ -166,15 +167,17 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new
+            var response = new PagedResponse<AppointmentResponseDto>
             {
-                pageNumber,
-                pageSize,
-                totalRecords,
-                totalPages = (int)Math.Ceiling(
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                TotalPages = (int)Math.Ceiling(
                     (double)totalRecords / pageSize),
-                appointments
-            });
+                Data = appointments
+            };
+
+            return Ok(response);
         }
 
         // Admin, Patient or Doctor: View one appointment if authorized

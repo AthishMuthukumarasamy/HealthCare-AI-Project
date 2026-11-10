@@ -67,15 +67,18 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new
-            {
-                pageNumber,
-                pageSize,
-                totalRecords,
-                totalPages = (int)Math.Ceiling(
-                    (double)totalRecords / pageSize),
-                medicalRecords
-            });
+            var response =
+                new PagedResponse<MedicalRecordResponseDto>
+                {
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalRecords = totalRecords,
+                    TotalPages = (int)Math.Ceiling(
+                        (double)totalRecords / pageSize),
+                    Data = medicalRecords
+                };
+
+            return Ok(response);
         }
 
         // Admin only: View medical record audit history

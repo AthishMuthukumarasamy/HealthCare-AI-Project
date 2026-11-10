@@ -61,15 +61,17 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new
+            var response = new PagedResponse<ProviderResponseDto>
             {
-                pageNumber,
-                pageSize,
-                totalRecords,
-                totalPages = (int)Math.Ceiling(
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                TotalPages = (int)Math.Ceiling(
                     (double)totalRecords / pageSize),
-                providers
-            });
+                Data = providers
+            };
+
+            return Ok(response);
         }
 
         // Admin or Doctor: View provider by ID
