@@ -25,12 +25,56 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin only: View all appointments
+        // Admin only: View all appointments with pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public IActionResult GetAllAppointments()
+        public async Task<IActionResult> GetAllAppointments(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
-            return Ok(_appointmentService.GetAllAppointments());
+            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+            {
+                return BadRequest(new
+                {
+                    message = "Page number must be at least 1 and page size must be between 1 and 100."
+                });
+            }
+
+            var query = _context.Appointments
+                .AsNoTracking()
+                .OrderBy(a => a.Id);
+
+            var totalRecords = await query.CountAsync();
+
+            var appointments = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(a => new AppointmentResponseDto
+                {
+                    Id = a.Id,
+                    PatientId = a.PatientId,
+                    PatientName = a.Patient != null
+                        ? a.Patient.FirstName + " " + a.Patient.LastName
+                        : string.Empty,
+                    ProviderId = a.ProviderId,
+                    ProviderName = a.Provider != null
+                        ? a.Provider.FirstName + " " + a.Provider.LastName
+                        : string.Empty,
+                    AppointmentDate = a.AppointmentDate,
+                    Reason = a.Reason,
+                    Status = a.Status
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                pageNumber,
+                pageSize,
+                totalRecords,
+                totalPages = (int)Math.Ceiling(
+                    (double)totalRecords / pageSize),
+                appointments
+            });
         }
 
         // Admin, Patient or Doctor: View appointments assigned to them
