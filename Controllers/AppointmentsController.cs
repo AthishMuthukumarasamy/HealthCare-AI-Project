@@ -25,7 +25,7 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin only: View all appointments with search, filtering and pagination
+        // Admin only: View all appointments with search, filtering, sorting and pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllAppointments(
@@ -34,7 +34,9 @@ namespace Healthcare.API.Controllers
             [FromQuery] string? search = null,
             [FromQuery] string? status = null,
             [FromQuery] int? patientId = null,
-            [FromQuery] int? providerId = null)
+            [FromQuery] int? providerId = null,
+            [FromQuery] string sortBy = "id",
+            [FromQuery] string sortOrder = "asc")
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -60,11 +62,40 @@ namespace Healthcare.API.Controllers
                 });
             }
 
+            var allowedSortFields = new[]
+            {
+                "id",
+                "appointmentdate",
+                "status",
+                "patientid",
+                "providerid",
+                "reason"
+            };
+
+            sortBy = sortBy.Trim().ToLowerInvariant();
+            sortOrder = sortOrder.Trim().ToLowerInvariant();
+
+            if (!allowedSortFields.Contains(sortBy))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid sortBy value. Allowed values: id, appointmentDate, status, patientId, providerId, reason."
+                });
+            }
+
+            if (sortOrder != "asc" && sortOrder != "desc")
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid sortOrder value. Allowed values: asc, desc."
+                });
+            }
+
             var query = _context.Appointments
                 .AsNoTracking()
                 .AsQueryable();
 
-            // Search patient name, provider name and appointment reason
+            // Search patient name, provider name and appointment reason.
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var searchTerm = search.Trim();
@@ -79,7 +110,7 @@ namespace Healthcare.API.Controllers
                          a.Provider.LastName.Contains(searchTerm))));
             }
 
-            // Filter by appointment status
+            // Filter by appointment status.
             if (!string.IsNullOrWhiteSpace(status))
             {
                 var statusTerm = status.Trim();
@@ -88,21 +119,58 @@ namespace Healthcare.API.Controllers
                     a.Status == statusTerm);
             }
 
-            // Filter by patient ID
+            // Filter by patient ID.
             if (patientId.HasValue)
             {
                 query = query.Where(a =>
                     a.PatientId == patientId.Value);
             }
 
-            // Filter by provider ID
+            // Filter by provider ID.
             if (providerId.HasValue)
             {
                 query = query.Where(a =>
                     a.ProviderId == providerId.Value);
             }
 
-            query = query.OrderBy(a => a.Id);
+            // Apply sorting.
+            query = (sortBy, sortOrder) switch
+            {
+                ("appointmentdate", "asc") =>
+                    query.OrderBy(a => a.AppointmentDate).ThenBy(a => a.Id),
+
+                ("appointmentdate", "desc") =>
+                    query.OrderByDescending(a => a.AppointmentDate).ThenBy(a => a.Id),
+
+                ("status", "asc") =>
+                    query.OrderBy(a => a.Status).ThenBy(a => a.Id),
+
+                ("status", "desc") =>
+                    query.OrderByDescending(a => a.Status).ThenBy(a => a.Id),
+
+                ("patientid", "asc") =>
+                    query.OrderBy(a => a.PatientId).ThenBy(a => a.Id),
+
+                ("patientid", "desc") =>
+                    query.OrderByDescending(a => a.PatientId).ThenBy(a => a.Id),
+
+                ("providerid", "asc") =>
+                    query.OrderBy(a => a.ProviderId).ThenBy(a => a.Id),
+
+                ("providerid", "desc") =>
+                    query.OrderByDescending(a => a.ProviderId).ThenBy(a => a.Id),
+
+                ("reason", "asc") =>
+                    query.OrderBy(a => a.Reason).ThenBy(a => a.Id),
+
+                ("reason", "desc") =>
+                    query.OrderByDescending(a => a.Reason).ThenBy(a => a.Id),
+
+                ("id", "desc") =>
+                    query.OrderByDescending(a => a.Id),
+
+                _ => query.OrderBy(a => a.Id)
+            };
 
             var totalRecords = await query.CountAsync();
 
@@ -157,7 +225,7 @@ namespace Healthcare.API.Controllers
             var query = _context.Appointments
                 .AsNoTracking();
 
-            // Patient: Only their own appointments
+            // Patient: Only their own appointments.
             if (User.IsInRole("Patient"))
             {
                 var userId = User.FindFirstValue(
@@ -177,7 +245,7 @@ namespace Healthcare.API.Controllers
                 query = query.Where(
                     a => a.PatientId == patient.Id);
             }
-            // Doctor: Only appointments assigned to them
+            // Doctor: Only appointments assigned to them.
             else if (User.IsInRole("Doctor"))
             {
                 var userId = User.FindFirstValue(
@@ -197,7 +265,7 @@ namespace Healthcare.API.Controllers
                 query = query.Where(
                     a => a.ProviderId == provider.Id);
             }
-            // Admin: No filter, so all appointments are visible
+            // Admin: No filter, so all appointments are visible.
             else if (!User.IsInRole("Admin"))
             {
                 return Forbid();
