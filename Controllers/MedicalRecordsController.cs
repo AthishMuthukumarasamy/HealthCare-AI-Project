@@ -25,14 +25,17 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin: View all medical records with search, filtering and pagination
+        // Admin: View all medical records with search, filtering,
+        // sorting and pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllMedicalRecords(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? search = null,
-            [FromQuery] int? patientId = null)
+            [FromQuery] int? patientId = null,
+            [FromQuery] string sortBy = "id",
+            [FromQuery] string sortOrder = "asc")
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -47,6 +50,35 @@ namespace Healthcare.API.Controllers
                 return BadRequest(new
                 {
                     message = "Patient ID must be greater than 0."
+                });
+            }
+
+            var allowedSortFields = new[]
+            {
+                "id",
+                "recorddate",
+                "diagnosis",
+                "patientid",
+                "createdat",
+                "updatedat"
+            };
+
+            sortBy = sortBy.Trim().ToLowerInvariant();
+            sortOrder = sortOrder.Trim().ToLowerInvariant();
+
+            if (!allowedSortFields.Contains(sortBy))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid sortBy value. Allowed values: id, recordDate, diagnosis, patientId, createdAt, updatedAt."
+                });
+            }
+
+            if (sortOrder != "asc" && sortOrder != "desc")
+            {
+                return BadRequest(new
+                {
+                    message = "sortOrder must be either 'asc' or 'desc'."
                 });
             }
 
@@ -76,7 +108,33 @@ namespace Healthcare.API.Controllers
                       m.Patient.LastName.Contains(searchTerm))));
             }
 
-            query = query.OrderBy(m => m.Id);
+            // Apply sorting
+            query = sortBy switch
+            {
+                "recorddate" => sortOrder == "asc"
+                    ? query.OrderBy(m => m.RecordDate).ThenBy(m => m.Id)
+                    : query.OrderByDescending(m => m.RecordDate).ThenBy(m => m.Id),
+
+                "diagnosis" => sortOrder == "asc"
+                    ? query.OrderBy(m => m.Diagnosis).ThenBy(m => m.Id)
+                    : query.OrderByDescending(m => m.Diagnosis).ThenBy(m => m.Id),
+
+                "patientid" => sortOrder == "asc"
+                    ? query.OrderBy(m => m.PatientId).ThenBy(m => m.Id)
+                    : query.OrderByDescending(m => m.PatientId).ThenBy(m => m.Id),
+
+                "createdat" => sortOrder == "asc"
+                    ? query.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
+                    : query.OrderByDescending(m => m.CreatedAt).ThenBy(m => m.Id),
+
+                "updatedat" => sortOrder == "asc"
+                    ? query.OrderBy(m => m.UpdatedAt).ThenBy(m => m.Id)
+                    : query.OrderByDescending(m => m.UpdatedAt).ThenBy(m => m.Id),
+
+                _ => sortOrder == "asc"
+                    ? query.OrderBy(m => m.Id)
+                    : query.OrderByDescending(m => m.Id)
+            };
 
             var totalRecords = await query.CountAsync();
 
