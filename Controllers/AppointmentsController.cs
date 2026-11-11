@@ -25,12 +25,16 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin only: View all appointments with pagination
+        // Admin only: View all appointments with search, filtering and pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllAppointments(
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? patientId = null,
+            [FromQuery] int? providerId = null)
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -40,9 +44,65 @@ namespace Healthcare.API.Controllers
                 });
             }
 
+            if (patientId.HasValue && patientId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Patient ID must be greater than 0."
+                });
+            }
+
+            if (providerId.HasValue && providerId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Provider ID must be greater than 0."
+                });
+            }
+
             var query = _context.Appointments
                 .AsNoTracking()
-                .OrderBy(a => a.Id);
+                .AsQueryable();
+
+            // Search patient name, provider name and appointment reason
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchTerm = search.Trim();
+
+                query = query.Where(a =>
+                    a.Reason.Contains(searchTerm) ||
+                    (a.Patient != null &&
+                        (a.Patient.FirstName.Contains(searchTerm) ||
+                         a.Patient.LastName.Contains(searchTerm))) ||
+                    (a.Provider != null &&
+                        (a.Provider.FirstName.Contains(searchTerm) ||
+                         a.Provider.LastName.Contains(searchTerm))));
+            }
+
+            // Filter by appointment status
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var statusTerm = status.Trim();
+
+                query = query.Where(a =>
+                    a.Status == statusTerm);
+            }
+
+            // Filter by patient ID
+            if (patientId.HasValue)
+            {
+                query = query.Where(a =>
+                    a.PatientId == patientId.Value);
+            }
+
+            // Filter by provider ID
+            if (providerId.HasValue)
+            {
+                query = query.Where(a =>
+                    a.ProviderId == providerId.Value);
+            }
+
+            query = query.OrderBy(a => a.Id);
 
             var totalRecords = await query.CountAsync();
 
