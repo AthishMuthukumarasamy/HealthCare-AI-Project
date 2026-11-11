@@ -311,4 +311,50 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Health Check Endpoint
+app.MapGet("/health", async (
+    IServiceScopeFactory scopeFactory,
+    ILogger<Program> logger) =>
+{
+    var databaseStatus = "Unhealthy";
+    var databaseHealthy = false;
+
+    try
+    {
+        using var scope = scopeFactory.CreateScope();
+
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<HealthcareDbContext>();
+
+        databaseHealthy = await dbContext.Database.CanConnectAsync();
+
+        databaseStatus = databaseHealthy ? "Healthy" : "Unhealthy";
+    }
+    catch (Exception exception)
+    {
+        logger.LogWarning(
+            exception,
+            "Database health check failed.");
+    }
+
+    var overallHealthy = databaseHealthy;
+
+    var response = new
+    {
+        status = overallHealthy ? "Healthy" : "Unhealthy",
+        checks = new
+        {
+            api = "Healthy",
+            database = databaseStatus
+        },
+        timestamp = DateTime.UtcNow
+    };
+
+    return Results.Json(
+        response,
+        statusCode: overallHealthy
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status503ServiceUnavailable);
+});
+
 app.Run();
