@@ -3,22 +3,29 @@ using Healthcare.API.Data;
 using Healthcare.API.DTOs;
 using Healthcare.API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Healthcare.API.Services
 {
     public class MedicalRecordService : IMedicalRecordService
     {
         private readonly HealthcareDbContext _context;
+        private readonly ILogger<MedicalRecordService> _logger;
 
-        public MedicalRecordService(HealthcareDbContext context)
+        public MedicalRecordService(
+            HealthcareDbContext context,
+            ILogger<MedicalRecordService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: All Medical Records
         public List<MedicalRecordResponseDto> GetAllMedicalRecords()
         {
-            return _context.MedicalRecords
+            _logger.LogInformation("Retrieving all medical records.");
+
+            var records = _context.MedicalRecords
                 .Include(m => m.Patient)
                 .Select(m => new MedicalRecordResponseDto
                 {
@@ -35,17 +42,33 @@ namespace Healthcare.API.Services
                     UpdatedAt = m.UpdatedAt
                 })
                 .ToList();
+
+            _logger.LogInformation(
+                "Retrieved {RecordCount} medical records.",
+                records.Count);
+
+            return records;
         }
 
         // GET: Medical Record By ID
         public MedicalRecordResponseDto? GetMedicalRecordById(int id)
         {
+            _logger.LogInformation(
+                "Retrieving medical record with ID {MedicalRecordId}.",
+                id);
+
             var record = _context.MedicalRecords
                 .Include(m => m.Patient)
                 .FirstOrDefault(m => m.Id == id);
 
             if (record == null)
+            {
+                _logger.LogWarning(
+                    "Medical record with ID {MedicalRecordId} was not found.",
+                    id);
+
                 return null;
+            }
 
             return new MedicalRecordResponseDto
             {
@@ -66,7 +89,11 @@ namespace Healthcare.API.Services
         // GET: Medical Records By Patient ID
         public List<MedicalRecordResponseDto> GetMedicalRecordsByPatientId(int patientId)
         {
-            return _context.MedicalRecords
+            _logger.LogInformation(
+                "Retrieving medical records for patient ID {PatientId}.",
+                patientId);
+
+            var records = _context.MedicalRecords
                 .Include(m => m.Patient)
                 .Where(m => m.PatientId == patientId)
                 .Select(m => new MedicalRecordResponseDto
@@ -84,13 +111,24 @@ namespace Healthcare.API.Services
                     UpdatedAt = m.UpdatedAt
                 })
                 .ToList();
+
+            _logger.LogInformation(
+                "Retrieved {RecordCount} medical records for patient ID {PatientId}.",
+                records.Count,
+                patientId);
+
+            return records;
         }
 
         // GET: Medical Record Audit History
         public List<MedicalRecordAuditLogResponseDto> GetMedicalRecordAuditHistory(
             int medicalRecordId)
         {
-            return _context.MedicalRecordAuditLogs
+            _logger.LogInformation(
+                "Retrieving audit history for medical record ID {MedicalRecordId}.",
+                medicalRecordId);
+
+            var auditHistory = _context.MedicalRecordAuditLogs
                 .Where(a => a.OriginalMedicalRecordId == medicalRecordId)
                 .OrderBy(a => a.PerformedAt)
                 .Select(a => new MedicalRecordAuditLogResponseDto
@@ -104,6 +142,13 @@ namespace Healthcare.API.Services
                     Changes = a.Changes
                 })
                 .ToList();
+
+            _logger.LogInformation(
+                "Retrieved {AuditCount} audit entries for medical record ID {MedicalRecordId}.",
+                auditHistory.Count,
+                medicalRecordId);
+
+            return auditHistory;
         }
 
         // CREATE: Medical Record with Audit Logging
@@ -111,8 +156,13 @@ namespace Healthcare.API.Services
             MedicalRecordCreateDto recordDto,
             string userId)
         {
+            _logger.LogInformation("Creating a new medical record.");
+
             if (!IsValidMedicalRecord(recordDto))
             {
+                _logger.LogWarning(
+                    "Medical record creation failed validation.");
+
                 throw new ArgumentException("Invalid medical record details.");
             }
 
@@ -149,11 +199,20 @@ namespace Healthcare.API.Services
 
                 transaction.Commit();
 
+                _logger.LogInformation(
+                    "Medical record with ID {MedicalRecordId} was created successfully.",
+                    record.Id);
+
                 return GetMedicalRecordById(record.Id)!;
             }
-            catch
+            catch (Exception ex)
             {
                 transaction.Rollback();
+
+                _logger.LogError(
+                    ex,
+                    "An error occurred while creating a medical record.");
+
                 throw;
             }
         }
@@ -164,14 +223,28 @@ namespace Healthcare.API.Services
             MedicalRecordCreateDto recordDto,
             string userId)
         {
+            _logger.LogInformation(
+                "Updating medical record with ID {MedicalRecordId}.",
+                id);
+
             var record = _context.MedicalRecords
                 .FirstOrDefault(m => m.Id == id);
 
             if (record == null)
+            {
+                _logger.LogWarning(
+                    "Medical record with ID {MedicalRecordId} was not found for update.",
+                    id);
+
                 return false;
+            }
 
             if (!IsValidMedicalRecord(recordDto))
             {
+                _logger.LogWarning(
+                    "Medical record with ID {MedicalRecordId} failed validation during update.",
+                    id);
+
                 throw new ArgumentException("Invalid medical record details.");
             }
 
@@ -193,7 +266,13 @@ namespace Healthcare.API.Services
                 changes.Add("Notes updated.");
 
             if (changes.Count == 0)
+            {
+                _logger.LogInformation(
+                    "No changes detected for medical record ID {MedicalRecordId}.",
+                    id);
+
                 return true;
+            }
 
             using var transaction = _context.Database.BeginTransaction();
 
@@ -223,11 +302,21 @@ namespace Healthcare.API.Services
 
                 transaction.Commit();
 
+                _logger.LogInformation(
+                    "Medical record with ID {MedicalRecordId} was updated successfully.",
+                    id);
+
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 transaction.Rollback();
+
+                _logger.LogError(
+                    ex,
+                    "An error occurred while updating medical record ID {MedicalRecordId}.",
+                    id);
+
                 throw;
             }
         }
@@ -235,11 +324,21 @@ namespace Healthcare.API.Services
         // DELETE: Medical Record with Audit Logging
         public bool DeleteMedicalRecord(int id, string userId)
         {
+            _logger.LogInformation(
+                "Deleting medical record with ID {MedicalRecordId}.",
+                id);
+
             var record = _context.MedicalRecords
                 .FirstOrDefault(m => m.Id == id);
 
             if (record == null)
+            {
+                _logger.LogWarning(
+                    "Medical record with ID {MedicalRecordId} was not found for deletion.",
+                    id);
+
                 return false;
+            }
 
             using var transaction = _context.Database.BeginTransaction();
 
@@ -263,11 +362,21 @@ namespace Healthcare.API.Services
 
                 transaction.Commit();
 
+                _logger.LogInformation(
+                    "Medical record with ID {MedicalRecordId} was deleted successfully.",
+                    id);
+
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 transaction.Rollback();
+
+                _logger.LogError(
+                    ex,
+                    "An error occurred while deleting medical record ID {MedicalRecordId}.",
+                    id);
+
                 throw;
             }
         }
