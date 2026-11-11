@@ -29,12 +29,13 @@ namespace Healthcare.API.Controllers
             _logger = logger;
         }
 
-        // Admin: View all patients with pagination
+        // Admin: View and search all patients with pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllPatients(
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null)
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -46,7 +47,20 @@ namespace Healthcare.API.Controllers
 
             var query = _context.Patients
                 .AsNoTracking()
-                .OrderBy(p => p.Id);
+                .AsQueryable();
+
+            // Search by first name, last name, or email.
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchTerm = search.Trim();
+
+                query = query.Where(p =>
+                    p.FirstName.Contains(searchTerm) ||
+                    p.LastName.Contains(searchTerm) ||
+                    p.Email.Contains(searchTerm));
+            }
+
+            query = query.OrderBy(p => p.Id);
 
             var totalRecords = await query.CountAsync();
 
