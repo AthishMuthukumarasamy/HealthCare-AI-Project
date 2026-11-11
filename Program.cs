@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,7 +56,6 @@ builder.Services.AddAuthentication(options =>
 });
 
 // HTTP Logging Configuration
-// HTTP Logging Configuration
 builder.Services.AddHttpLogging(options =>
 {
     options.LoggingFields =
@@ -64,7 +64,7 @@ builder.Services.AddHttpLogging(options =>
         HttpLoggingFields.Duration;
 });
 
-// Controllers and OpenAPI
+// Controllers and Validation Configuration
 builder.Services
     .AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -95,7 +95,41 @@ builder.Services
         };
     });
 
-builder.Services.AddOpenApi();
+// Swagger Configuration
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "HealthConnect AI API",
+        Version = "v1",
+        Description = "API documentation for the HealthConnect AI healthcare management system."
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token. Swagger will add the Bearer prefix automatically."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Dependency Injection
 builder.Services.AddScoped<IPatientService, PatientService>();
@@ -255,7 +289,15 @@ app.UseExceptionHandler(errorApp =>
 // HTTP Pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "HealthConnect AI API v1");
+
+        options.RoutePrefix = "swagger";
+    });
 }
 
 // HTTP Request Logging
