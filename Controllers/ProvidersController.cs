@@ -25,12 +25,14 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin only: View all providers with pagination
+        // Admin only: View, search and filter providers with pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllProviders(
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null,
+            [FromQuery] string? specialization = null)
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -42,7 +44,28 @@ namespace Healthcare.API.Controllers
 
             var query = _context.Providers
                 .AsNoTracking()
-                .OrderBy(p => p.Id);
+                .AsQueryable();
+
+            // Search providers by first name or last name.
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchTerm = search.Trim();
+
+                query = query.Where(p =>
+                    p.FirstName.Contains(searchTerm) ||
+                    p.LastName.Contains(searchTerm));
+            }
+
+            // Filter providers by specialization.
+            if (!string.IsNullOrWhiteSpace(specialization))
+            {
+                var specializationTerm = specialization.Trim();
+
+                query = query.Where(p =>
+                    p.Specialization.Contains(specializationTerm));
+            }
+
+            query = query.OrderBy(p => p.Id);
 
             var totalRecords = await query.CountAsync();
 
