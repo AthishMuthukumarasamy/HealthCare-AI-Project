@@ -4,21 +4,29 @@ using Healthcare.API.DTOs;
 using Healthcare.API.Enums;
 using Healthcare.API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Healthcare.API.Services
 {
     public class AppointmentService : IAppointmentService
     {
         private readonly HealthcareDbContext _context;
+        private readonly ILogger<AppointmentService> _logger;
 
-        public AppointmentService(HealthcareDbContext context)
+        public AppointmentService(
+            HealthcareDbContext context,
+            ILogger<AppointmentService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public List<AppointmentResponseDto> GetAllAppointments()
         {
-            return _context.Appointments
+            _logger.LogInformation(
+                "Retrieving all appointments.");
+
+            var appointments = _context.Appointments
                 .Include(a => a.Patient)
                 .Include(a => a.Provider)
                 .Select(a => new AppointmentResponseDto
@@ -33,17 +41,36 @@ namespace Healthcare.API.Services
                     Status = a.Status
                 })
                 .ToList();
+
+            _logger.LogInformation(
+                "Successfully retrieved {AppointmentCount} appointments.",
+                appointments.Count);
+
+            return appointments;
         }
 
         public AppointmentResponseDto? GetAppointmentById(int id)
         {
+            _logger.LogInformation(
+                "Retrieving appointment with ID {AppointmentId}.", id);
+
             var appointment = _context.Appointments
                 .Include(a => a.Patient)
                 .Include(a => a.Provider)
                 .FirstOrDefault(a => a.Id == id);
 
             if (appointment == null)
+            {
+                _logger.LogWarning(
+                    "Appointment with ID {AppointmentId} was not found.",
+                    id);
+
                 return null;
+            }
+
+            _logger.LogInformation(
+                "Successfully retrieved appointment with ID {AppointmentId}.",
+                id);
 
             return new AppointmentResponseDto
             {
@@ -58,10 +85,17 @@ namespace Healthcare.API.Services
             };
         }
 
-        public AppointmentResponseDto CreateAppointment(AppointmentCreateDto appointmentDto)
+        public AppointmentResponseDto CreateAppointment(
+            AppointmentCreateDto appointmentDto)
         {
+            _logger.LogInformation(
+                "Creating a new appointment.");
+
             if (!IsValidAppointment(appointmentDto))
             {
+                _logger.LogWarning(
+                    "Appointment creation failed because the supplied details are invalid.");
+
                 throw new ArgumentException("Invalid appointment details.");
             }
 
@@ -77,19 +111,38 @@ namespace Healthcare.API.Services
             _context.Appointments.Add(appointment);
             _context.SaveChanges();
 
+            _logger.LogInformation(
+                "Appointment created successfully with ID {AppointmentId}.",
+                appointment.Id);
+
             return GetAppointmentById(appointment.Id)!;
         }
 
-        public bool UpdateAppointment(int id, AppointmentCreateDto appointmentDto)
+        public bool UpdateAppointment(
+            int id,
+            AppointmentCreateDto appointmentDto)
         {
+            _logger.LogInformation(
+                "Updating appointment with ID {AppointmentId}.", id);
+
             var appointment = _context.Appointments
                 .FirstOrDefault(a => a.Id == id);
 
             if (appointment == null)
+            {
+                _logger.LogWarning(
+                    "Cannot update appointment. Appointment with ID {AppointmentId} was not found.",
+                    id);
+
                 return false;
+            }
 
             if (!IsValidAppointment(appointmentDto))
             {
+                _logger.LogWarning(
+                    "Appointment update failed because the supplied details are invalid for appointment ID {AppointmentId}.",
+                    id);
+
                 throw new ArgumentException("Invalid appointment details.");
             }
 
@@ -100,15 +153,27 @@ namespace Healthcare.API.Services
 
             _context.SaveChanges();
 
+            _logger.LogInformation(
+                "Appointment with ID {AppointmentId} updated successfully.",
+                id);
+
             return true;
         }
 
         public bool UpdateAppointmentStatus(int id, string status)
         {
+            _logger.LogInformation(
+                "Updating status for appointment ID {AppointmentId}.",
+                id);
+
             if (!Enum.TryParse<AppointmentStatus>(
                     status, true, out var parsedStatus)
                 || !Enum.IsDefined(typeof(AppointmentStatus), parsedStatus))
             {
+                _logger.LogWarning(
+                    "Invalid status supplied for appointment ID {AppointmentId}.",
+                    id);
+
                 throw new ArgumentException("Invalid appointment status.");
             }
 
@@ -116,7 +181,13 @@ namespace Healthcare.API.Services
                 .FirstOrDefault(a => a.Id == id);
 
             if (appointment == null)
+            {
+                _logger.LogWarning(
+                    "Cannot update status. Appointment with ID {AppointmentId} was not found.",
+                    id);
+
                 return false;
+            }
 
             bool isValidTransition = appointment.Status switch
             {
@@ -133,6 +204,10 @@ namespace Healthcare.API.Services
 
             if (!isValidTransition)
             {
+                _logger.LogWarning(
+                    "Invalid status transition attempted for appointment ID {AppointmentId}.",
+                    id);
+
                 throw new ArgumentException(
                     $"Cannot change appointment status from {appointment.Status} to {parsedStatus}.");
             }
@@ -141,24 +216,42 @@ namespace Healthcare.API.Services
 
             _context.SaveChanges();
 
+            _logger.LogInformation(
+                "Status for appointment ID {AppointmentId} updated successfully.",
+                id);
+
             return true;
         }
 
         public bool DeleteAppointment(int id)
         {
+            _logger.LogInformation(
+                "Deleting appointment with ID {AppointmentId}.", id);
+
             var appointment = _context.Appointments
                 .FirstOrDefault(a => a.Id == id);
 
             if (appointment == null)
+            {
+                _logger.LogWarning(
+                    "Cannot delete appointment. Appointment with ID {AppointmentId} was not found.",
+                    id);
+
                 return false;
+            }
 
             _context.Appointments.Remove(appointment);
             _context.SaveChanges();
 
+            _logger.LogInformation(
+                "Appointment with ID {AppointmentId} deleted successfully.",
+                id);
+
             return true;
         }
 
-        private bool IsValidAppointment(AppointmentCreateDto appointmentDto)
+        private bool IsValidAppointment(
+            AppointmentCreateDto appointmentDto)
         {
             return appointmentDto.PatientId > 0
                 && appointmentDto.ProviderId > 0
