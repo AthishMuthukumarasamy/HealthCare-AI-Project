@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -51,6 +52,16 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtKey))
     };
+});
+
+// HTTP Logging Configuration
+// HTTP Logging Configuration
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+        HttpLoggingFields.RequestProperties |
+        HttpLoggingFields.ResponseStatusCode |
+        HttpLoggingFields.Duration;
 });
 
 // Controllers and OpenAPI
@@ -246,6 +257,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// HTTP Request Logging
+app.UseHttpLogging();
 
 app.UseHttpsRedirection();
 
