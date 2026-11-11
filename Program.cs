@@ -5,6 +5,7 @@ using Healthcare.API.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -53,7 +54,36 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Controllers and OpenAPI
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value!.Errors
+                        .Select(error =>
+                            string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                ? "The supplied value is invalid."
+                                : error.ErrorMessage)
+                        .ToArray()
+                );
+
+            var response = new
+            {
+                status = StatusCodes.Status400BadRequest,
+                message = "One or more validation errors occurred.",
+                errors,
+                traceId = context.HttpContext.TraceIdentifier
+            };
+
+            return new BadRequestObjectResult(response);
+        };
+    });
+
 builder.Services.AddOpenApi();
 
 // Dependency Injection
