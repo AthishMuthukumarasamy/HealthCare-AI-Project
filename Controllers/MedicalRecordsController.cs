@@ -348,8 +348,6 @@ namespace Healthcare.API.Controllers
                     p.ApplicationUserId == userId);
             }
 
-            // Doctor can access records when an appointment
-            // exists with the patient, regardless of status.
             if (User.IsInRole("Doctor"))
             {
                 return await _context.Appointments.AnyAsync(a =>
