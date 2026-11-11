@@ -181,6 +181,36 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+// Centralised Exception Handling
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var logger = context.RequestServices
+            .GetRequiredService<ILogger<Program>>();
+
+        var exception = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()
+            ?.Error;
+
+        logger.LogError(
+            exception,
+            "An unexpected error occurred while processing the request.");
+
+        context.Response.StatusCode =
+            StatusCodes.Status500InternalServerError;
+
+        context.Response.ContentType = "application/json";
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = StatusCodes.Status500InternalServerError,
+            message = "An unexpected error occurred. Please try again later.",
+            traceId = context.TraceIdentifier
+        });
+    });
+});
+
 // HTTP Pipeline
 if (app.Environment.IsDevelopment())
 {
