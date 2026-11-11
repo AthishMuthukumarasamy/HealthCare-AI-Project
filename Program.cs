@@ -215,12 +215,6 @@ app.UseExceptionHandler(errorApp =>
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-
-    // TEMPORARY: Test centralised exception handling
-    app.MapGet("/test-error", () =>
-    {
-        throw new Exception("This is a test exception.");
-    });
 }
 
 app.UseHttpsRedirection();
