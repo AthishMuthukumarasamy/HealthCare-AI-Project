@@ -25,12 +25,14 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin: View all medical records with pagination
+        // Admin: View all medical records with search, filtering and pagination
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllMedicalRecords(
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null,
+            [FromQuery] int? patientId = null)
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
@@ -40,9 +42,41 @@ namespace Healthcare.API.Controllers
                 });
             }
 
+            if (patientId.HasValue && patientId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Patient ID must be greater than 0."
+                });
+            }
+
             var query = _context.MedicalRecords
                 .AsNoTracking()
-                .OrderBy(m => m.Id);
+                .AsQueryable();
+
+            // Filter by patient ID
+            if (patientId.HasValue)
+            {
+                query = query.Where(m => m.PatientId == patientId.Value);
+            }
+
+            // Search diagnosis, treatment, notes and patient name
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchTerm = search.Trim();
+
+                query = query.Where(m =>
+                    m.Diagnosis.Contains(searchTerm) ||
+                    (m.Treatment != null &&
+                     m.Treatment.Contains(searchTerm)) ||
+                    (m.Notes != null &&
+                     m.Notes.Contains(searchTerm)) ||
+                    (m.Patient != null &&
+                     (m.Patient.FirstName.Contains(searchTerm) ||
+                      m.Patient.LastName.Contains(searchTerm))));
+            }
+
+            query = query.OrderBy(m => m.Id);
 
             var totalRecords = await query.CountAsync();
 
@@ -67,16 +101,15 @@ namespace Healthcare.API.Controllers
                 })
                 .ToListAsync();
 
-            var response =
-                new PagedResponse<MedicalRecordResponseDto>
-                {
-                    PageNumber = pageNumber,
-                    PageSize = pageSize,
-                    TotalRecords = totalRecords,
-                    TotalPages = (int)Math.Ceiling(
-                        (double)totalRecords / pageSize),
-                    Data = medicalRecords
-                };
+            var response = new PagedResponse<MedicalRecordResponseDto>
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = totalRecords,
+                TotalPages = (int)Math.Ceiling(
+                    (double)totalRecords / pageSize),
+                Data = medicalRecords
+            };
 
             return Ok(response);
         }
