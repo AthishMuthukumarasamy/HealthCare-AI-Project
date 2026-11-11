@@ -25,20 +25,51 @@ namespace Healthcare.API.Controllers
             _context = context;
         }
 
-        // Admin only: View, search and filter providers with pagination
+        // Admin only: View, search, filter, sort and paginate providers
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllProviders(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? search = null,
-            [FromQuery] string? specialization = null)
+            [FromQuery] string? specialization = null,
+            [FromQuery] string sortBy = "id",
+            [FromQuery] string sortOrder = "asc")
         {
             if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
             {
                 return BadRequest(new
                 {
                     message = "Page number must be at least 1 and page size must be between 1 and 100."
+                });
+            }
+
+            var allowedSortFields = new[]
+            {
+                "id",
+                "firstname",
+                "lastname",
+                "specialization",
+                "email",
+                "yearsofexperience"
+            };
+
+            sortBy = sortBy.Trim().ToLowerInvariant();
+            sortOrder = sortOrder.Trim().ToLowerInvariant();
+
+            if (!allowedSortFields.Contains(sortBy))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid sortBy value. Allowed values: id, firstName, lastName, specialization, email, yearsOfExperience."
+                });
+            }
+
+            if (sortOrder != "asc" && sortOrder != "desc")
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid sortOrder value. Allowed values: asc, desc."
                 });
             }
 
@@ -65,7 +96,44 @@ namespace Healthcare.API.Controllers
                     p.Specialization.Contains(specializationTerm));
             }
 
-            query = query.OrderBy(p => p.Id);
+            // Apply sorting.
+            query = (sortBy, sortOrder) switch
+            {
+                ("firstname", "asc") =>
+                    query.OrderBy(p => p.FirstName).ThenBy(p => p.Id),
+
+                ("firstname", "desc") =>
+                    query.OrderByDescending(p => p.FirstName).ThenBy(p => p.Id),
+
+                ("lastname", "asc") =>
+                    query.OrderBy(p => p.LastName).ThenBy(p => p.Id),
+
+                ("lastname", "desc") =>
+                    query.OrderByDescending(p => p.LastName).ThenBy(p => p.Id),
+
+                ("specialization", "asc") =>
+                    query.OrderBy(p => p.Specialization).ThenBy(p => p.Id),
+
+                ("specialization", "desc") =>
+                    query.OrderByDescending(p => p.Specialization).ThenBy(p => p.Id),
+
+                ("email", "asc") =>
+                    query.OrderBy(p => p.Email).ThenBy(p => p.Id),
+
+                ("email", "desc") =>
+                    query.OrderByDescending(p => p.Email).ThenBy(p => p.Id),
+
+                ("yearsofexperience", "asc") =>
+                    query.OrderBy(p => p.YearsOfExperience).ThenBy(p => p.Id),
+
+                ("yearsofexperience", "desc") =>
+                    query.OrderByDescending(p => p.YearsOfExperience).ThenBy(p => p.Id),
+
+                ("id", "desc") =>
+                    query.OrderByDescending(p => p.Id),
+
+                _ => query.OrderBy(p => p.Id)
+            };
 
             var totalRecords = await query.CountAsync();
 
