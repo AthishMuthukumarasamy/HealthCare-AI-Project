@@ -5,6 +5,7 @@ using Healthcare.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Globalization;
@@ -19,17 +20,20 @@ namespace Healthcare.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly HealthcareDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
             HealthcareDbContext context,
             IConfiguration configuration,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _context = context;
             _configuration = configuration;
             _logger = logger;
@@ -37,6 +41,7 @@ namespace Healthcare.API.Controllers
 
         // Patient Registration
         [HttpPost("register")]
+        [EnableRateLimiting("Registration")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
             if (!ModelState.IsValid)
@@ -53,17 +58,6 @@ namespace Healthcare.API.Controllers
                 return BadRequest(new
                 {
                     message = "Please provide a valid date of birth."
-                });
-            }
-
-            var existingUser =
-                await _userManager.FindByEmailAsync(email);
-
-            if (existingUser != null)
-            {
-                return BadRequest(new
-                {
-                    message = "Email is already registered."
                 });
             }
 
@@ -88,10 +82,12 @@ namespace Healthcare.API.Controllers
                 {
                     await transaction.RollbackAsync();
 
+                    _logger.LogWarning(
+                        "Patient registration was rejected by Identity validation.");
+
                     return BadRequest(new
                     {
-                        errors = result.Errors.Select(
-                            e => e.Description)
+                        message = "Registration could not be completed. Please check your details and try again."
                     });
                 }
 
@@ -108,7 +104,7 @@ namespace Healthcare.API.Controllers
 
                     return StatusCode(500, new
                     {
-                        message = "Unable to assign the Patient role."
+                        message = "Unable to complete patient registration."
                     });
                 }
 
@@ -143,8 +139,7 @@ namespace Healthcare.API.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Patient registration failed for email {Email}.",
-                    email);
+                    "Patient registration failed.");
 
                 try
                 {
@@ -166,6 +161,7 @@ namespace Healthcare.API.Controllers
 
         // User Login
         [HttpPost("login")]
+        [EnableRateLimiting("Login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             if (!ModelState.IsValid)
@@ -177,10 +173,29 @@ namespace Healthcare.API.Controllers
 
             var user = await _userManager.FindByEmailAsync(email);
 
-            if (user == null ||
-                !await _userManager.CheckPasswordAsync(
-                    user, dto.Password))
+            if (user == null)
             {
+                return Unauthorized(new
+                {
+                    message = "Invalid email or password."
+                });
+            }
+
+            // Check password and record failed attempts for lockout.
+            var signInResult = await _signInManager
+                .CheckPasswordSignInAsync(
+                    user,
+                    dto.Password,
+                    lockoutOnFailure: true);
+
+            if (!signInResult.Succeeded)
+            {
+                if (signInResult.IsLockedOut)
+                {
+                    _logger.LogWarning(
+                        "A login attempt was made for a locked account.");
+                }
+
                 return Unauthorized(new
                 {
                     message = "Invalid email or password."

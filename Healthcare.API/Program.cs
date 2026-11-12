@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +21,27 @@ builder.Services.AddDbContext<HealthcareDbContext>(options =>
         builder.Configuration.GetConnectionString("HealthcareConnection")));
 
 // Identity Configuration
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        // Password Policy
+        options.Password.RequiredLength = 12;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Password.RequiredUniqueChars = 4;
+
+        // Account Lockout Policy
+        options.Lockout.DefaultLockoutTimeSpan =
+            TimeSpan.FromMinutes(5);
+
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
+
+        // User Policy
+        options.User.RequireUniqueEmail = true;
+    })
     .AddEntityFrameworkStores<HealthcareDbContext>()
     .AddDefaultTokenProviders();
 
@@ -29,6 +51,19 @@ var jwtKey = builder.Configuration["Jwt:Key"]
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must contain at least 32 UTF-8 bytes.");
+}
+
+if (string.IsNullOrWhiteSpace(jwtIssuer) ||
+    string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException(
+        "JWT issuer and audience must be configured.");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -51,8 +86,45 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
 
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtKey))
+            Encoding.UTF8.GetBytes(jwtKey)),
+
+        ClockSkew = TimeSpan.FromMinutes(1)
     };
+});
+
+// Rate Limiting Configuration
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode =
+        StatusCodes.Status429TooManyRequests;
+
+    // Login: Maximum 5 requests per minute per IP address
+    options.AddPolicy("Login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey:
+                httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    // Registration: Maximum 3 requests per 10 minutes per IP address
+    options.AddPolicy("Registration", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey:
+                httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
 });
 
 // HTTP Logging Configuration
@@ -187,9 +259,6 @@ if (app.Environment.IsDevelopment())
             "BootstrapAdmin:Password"];
 
         Console.WriteLine(
-            $"Bootstrap Admin email: {adminEmail ?? "NULL"}");
-
-        Console.WriteLine(
             $"Bootstrap Admin password configured: " +
             $"{!string.IsNullOrWhiteSpace(adminPassword)}");
 
@@ -304,6 +373,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpLogging();
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 
