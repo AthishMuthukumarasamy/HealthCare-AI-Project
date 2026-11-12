@@ -1,0 +1,143 @@
+
+<div class="dashboard-content">
+  <section class="welcome-section">
+    <div>
+      <span class="welcome-label">OVERVIEW</span>
+      <h1>Welcome back, Admin 👋</h1>
+      <p>Here's what's happening across your healthcare platform today.</p>
+    </div>
+
+    <button class="primary-button">
+      <span>+</span>
+      New Appointment
+    </button>
+  </section>
+
+  <section class="statistics-grid">
+    @for (stat of statistics; track stat.label) {
+      <article class="stat-card">
+        <div class="stat-card-top">
+          <span class="stat-icon">{{ stat.icon }}</span>
+          <span class="stat-change">{{ stat.change }}</span>
+        </div>
+
+        <div class="stat-value">{{ stat.value }}</div>
+        <div class="stat-label">{{ stat.label }}</div>
+      </article>
+    }
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="content-card appointments-card">
+      <div class="card-header">
+        <div>
+          <h2>Recent Appointments</h2>
+          <p>Overview of upcoming appointments</p>
+        </div>
+
+        <button class="text-button">View all →</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>PATIENT</th>
+              <th>PROVIDER</th>
+              <th>DATE & TIME</th>
+              <th>TYPE</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (appointment of appointments; track appointment.patient) {
+              <tr>
+                <td>
+                  <div class="patient-cell">
+                    <div class="patient-avatar">
+                      {{ appointment.patient.charAt(0) }}
+                    </div>
+                    <strong>{{ appointment.patient }}</strong>
+                  </div>
+                </td>
+
+                <td>{{ appointment.provider }}</td>
+
+                <td>
+                  <div class="date-cell">
+                    <strong>{{ appointment.date }}</strong>
+                    <span>{{ appointment.time }}</span>
+                  </div>
+                </td>
+
+                <td>{{ appointment.type }}</td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.confirmed]="appointment.status === 'Confirmed'"
+                    [class.scheduled]="appointment.status === 'Scheduled'"
+                    [class.pending]="appointment.status === 'Pending'"
+                  >
+                    {{ appointment.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="content-card activity-card">
+      <div class="card-header">
+        <div>
+          <h2>Platform Overview</h2>
+          <p>Healthcare management at a glance</p>
+        </div>
+      </div>
+
+      <div class="overview-item">
+        <div class="overview-icon patients-icon">♙</div>
+        <div class="overview-details">
+          <strong>Patient Management</strong>
+          <span>Manage patient profiles</span>
+        </div>
+        <span class="overview-arrow">→</span>
+      </div>
+
+      <div class="overview-item">
+        <div class="overview-icon providers-icon">⚕</div>
+        <div class="overview-details">
+          <strong>Provider Management</strong>
+          <span>Manage healthcare providers</span>
+        </div>
+        <span class="overview-arrow">→</span>
+      </div>
+
+      <div class="overview-item">
+        <div class="overview-icon appointments-icon">▣</div>
+        <div class="overview-details">
+          <strong>Appointments</strong>
+          <span>Track scheduled visits</span>
+        </div>
+        <span class="overview-arrow">→</span>
+      </div>
+
+      <div class="overview-item">
+        <div class="overview-icon records-icon">▤</div>
+        <div class="overview-details">
+          <strong>Medical Records</strong>
+          <span>Access patient records</span>
+        </div>
+        <span class="overview-arrow">→</span>
+      </div>
+    </article>
+  </section>
+
+  <footer class="dashboard-footer">
+    <span>© 2026 HealthConnect AI</span>
+    <span>Healthcare management, made smarter.</span>
+  </footer>
+</div>

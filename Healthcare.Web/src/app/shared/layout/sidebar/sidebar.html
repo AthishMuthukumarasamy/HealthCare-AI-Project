@@ -1,0 +1,51 @@
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">+</div>
+
+    <div class="brand-text">
+      <h2>HealthConnect AI</h2>
+      <span>HEALTHCARE PLATFORM</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <span class="section-label">MAIN MENU</span>
+
+    <nav class="navigation">
+      @for (item of navigationItems; track item.route) {
+        <a
+          class="nav-item"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="sidebar-help">
+      <div class="help-icon">?</div>
+
+      <div>
+        <strong>Need help?</strong>
+        <span>Contact support</span>
+      </div>
+    </div>
+
+    <div class="user-profile">
+      <div class="avatar">AD</div>
+
+      <div class="user-details">
+        <strong>Admin User</strong>
+        <span>Administrator</span>
+      </div>
+
+      <span class="profile-menu">•••</span>
+    </div>
+  </div>
+</aside>

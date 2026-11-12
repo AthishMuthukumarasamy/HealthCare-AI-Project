@@ -1,0 +1,26 @@
+
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.main-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.page-content {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .app-layout {
+    display: block;
+  }
+}

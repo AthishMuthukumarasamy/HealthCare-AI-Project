@@ -1,0 +1,176 @@
+
+<div class="login-page">
+
+  <section class="login-brand-panel">
+    <div class="brand">
+      <div class="brand-icon">✚</div>
+      <div>
+        <h2>HealthConnect AI</h2>
+        <span>SMARTER HEALTHCARE MANAGEMENT</span>
+      </div>
+    </div>
+
+    <div class="brand-content">
+      <div class="brand-illustration">
+        <div class="illustration-circle">
+          <div class="medical-cross">✚</div>
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <span class="floating-icon icon-one">♡</span>
+          <span class="floating-icon icon-two">⚕</span>
+          <span class="floating-icon icon-three">✚</span>
+        </div>
+      </div>
+
+      <h1>Healthcare, connected.<br>Care, simplified.</h1>
+      <p>
+        A smarter way to manage patients, healthcare providers,
+        appointments and medical records — all in one place.
+      </p>
+
+      <div class="feature-list">
+        <div>✓ Secure healthcare management</div>
+        <div>✓ Connected care experience</div>
+        <div>✓ Intelligent healthcare platform</div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      © 2026 HealthConnect AI. All rights reserved.
+    </div>
+  </section>
+
+  <section class="login-form-panel">
+
+    <div class="mobile-brand">
+      <div class="brand-icon">✚</div>
+      <strong>HealthConnect AI</strong>
+    </div>
+
+    <div class="login-card">
+
+      <div class="login-heading">
+        <span class="welcome-label">WELCOME BACK</span>
+        <h1>Sign in to your account</h1>
+        <p>Enter your credentials to access your workspace.</p>
+      </div>
+
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+
+        <label class="field-label">I am signing in as</label>
+
+        <div class="role-selector">
+          <button
+            type="button"
+            [class.selected]="selectedRole === 'Admin'"
+            (click)="selectedRole = 'Admin'"
+          >
+            <span>▦</span>
+            Admin
+          </button>
+
+          <button
+            type="button"
+            [class.selected]="selectedRole === 'Doctor'"
+            (click)="selectedRole = 'Doctor'"
+          >
+            <span>⚕</span>
+            Doctor
+          </button>
+
+          <button
+            type="button"
+            [class.selected]="selectedRole === 'Patient'"
+            (click)="selectedRole = 'Patient'"
+          >
+            <span>♙</span>
+            Patient
+          </button>
+        </div>
+
+        <div class="form-field">
+          <label for="email">Email address</label>
+          <div class="input-wrapper">
+            <span class="input-icon">✉</span>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              [(ngModel)]="email"
+              placeholder="Enter your email address"
+              autocomplete="username"
+              required
+              email
+            />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">♙</span>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="togglePassword()"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword() ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+        </div>
+
+        @if (errorMessage()) {
+          <div class="login-error" role="alert">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="form-options">
+          <label class="remember-option">
+            <input type="checkbox" name="rememberMe" />
+            <span>Remember me</span>
+          </label>
+
+          <a href="#" (click)="$event.preventDefault()">Forgot password?</a>
+        </div>
+
+        <button
+          type="submit"
+          class="login-button"
+          [disabled]="loginForm.invalid || isLoading()"
+        >
+          @if (isLoading()) {
+            Signing in...
+          } @else {
+            Sign in to your account
+            <span>→</span>
+          }
+        </button>
+
+      </form>
+
+      <div class="security-note">
+        <span>♧</span>
+        Your information is protected with secure authentication.
+      </div>
+
+    </div>
+
+    <div class="login-bottom">
+      Need assistance? Contact your system administrator.
+    </div>
+
+  </section>
+
+</div>

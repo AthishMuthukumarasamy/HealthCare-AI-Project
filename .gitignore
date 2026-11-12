@@ -483,3 +483,15 @@ $RECYCLE.BIN/
 
 # Local database configuration
 appsettings.Development.json
+
+
+# Angular build output
+Healthcare.Web/dist/
+Healthcare.Web/.angular/
+Healthcare.Web/coverage/
+
+# Angular and Node local files
+Healthcare.Web/node_modules/
+Healthcare.Web/.env
+Healthcare.Web/.env.*
+!Healthcare.Web/.env.example
