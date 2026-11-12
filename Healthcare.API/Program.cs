@@ -127,6 +127,18 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+// CORS Configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularFrontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
+            .WithHeaders("Authorization", "Content-Type");
+    });
+});
+
 // HTTP Logging Configuration
 builder.Services.AddHttpLogging(options =>
 {
@@ -375,6 +387,8 @@ app.UseHttpLogging();
 app.UseHttpsRedirection();
 
 app.UseRouting();
+
+app.UseCors("AngularFrontend");
 
 app.UseRateLimiter();
 
