@@ -18,12 +18,29 @@ export interface PaginatedResponse<T> {
 })
 export class Dashboard {
   private readonly http = inject(HttpClient);
-
   private readonly apiUrl = environment.apiUrl;
 
   getPatientCount(): Observable<PaginatedResponse<unknown>> {
     return this.http.get<PaginatedResponse<unknown>>(
       `${this.apiUrl}/patients`
+    );
+  }
+
+  getProviderCount(): Observable<PaginatedResponse<unknown>> {
+    return this.http.get<PaginatedResponse<unknown>>(
+      `${this.apiUrl}/providers`
+    );
+  }
+
+  getAppointmentCount(): Observable<PaginatedResponse<unknown>> {
+    return this.http.get<PaginatedResponse<unknown>>(
+      `${this.apiUrl}/appointments`
+    );
+  }
+
+  getMedicalRecordCount(): Observable<PaginatedResponse<unknown>> {
+    return this.http.get<PaginatedResponse<unknown>>(
+      `${this.apiUrl}/medicalrecords`
     );
   }
 }

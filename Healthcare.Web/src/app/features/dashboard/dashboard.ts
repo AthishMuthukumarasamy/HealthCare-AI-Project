@@ -1,6 +1,7 @@
 
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 
 import { Dashboard as DashboardService } from '../../core/services/dashboard';
 
@@ -15,7 +16,6 @@ export class Dashboard {
   private readonly dashboardService = inject(DashboardService);
 
   protected readonly title = signal('HealthConnect AI');
-
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
 
@@ -70,22 +70,46 @@ export class Dashboard {
   ];
 
   constructor() {
-    this.loadPatientCount();
+    this.loadDashboardStatistics();
   }
 
-  private loadPatientCount(): void {
+  private loadDashboardStatistics(): void {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.dashboardService.getPatientCount().subscribe({
+    forkJoin({
+      patients: this.dashboardService.getPatientCount(),
+      providers: this.dashboardService.getProviderCount(),
+      appointments: this.dashboardService.getAppointmentCount(),
+      medicalRecords: this.dashboardService.getMedicalRecordCount()
+    }).subscribe({
       next: response => {
-        this.statistics.update(items =>
-          items.map(item =>
-            item.label === 'Total Patients'
-              ? { ...item, value: response.totalRecords.toLocaleString() }
-              : item
-          )
-        );
+        this.statistics.set([
+          {
+            label: 'Total Patients',
+            value: response.patients.totalRecords.toLocaleString(),
+            change: '',
+            icon: '♙'
+          },
+          {
+            label: 'Total Providers',
+            value: response.providers.totalRecords.toLocaleString(),
+            change: '',
+            icon: '⚕'
+          },
+          {
+            label: 'Appointments',
+            value: response.appointments.totalRecords.toLocaleString(),
+            change: '',
+            icon: '▣'
+          },
+          {
+            label: 'Medical Records',
+            value: response.medicalRecords.totalRecords.toLocaleString(),
+            change: '',
+            icon: '▤'
+          }
+        ]);
 
         this.isLoading.set(false);
       },
@@ -98,7 +122,7 @@ export class Dashboard {
           );
         } else {
           this.errorMessage.set(
-            'Unable to load patient statistics. Please try again.'
+            'Unable to load dashboard statistics. Please try again.'
           );
         }
       }
