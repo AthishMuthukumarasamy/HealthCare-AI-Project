@@ -1,5 +1,6 @@
-
 import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
+
 import { Auth } from '../../../core/services/auth';
 
 @Component({
@@ -11,4 +12,11 @@ import { Auth } from '../../../core/services/auth';
 })
 export class Topbar {
   protected readonly auth = inject(Auth);
+
+  private readonly router = inject(Router);
+
+  protected onLogout(): void {
+    this.auth.logout();
+    void this.router.navigate(['/login']);
+  }
 }
