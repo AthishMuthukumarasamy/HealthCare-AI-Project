@@ -31,7 +31,7 @@ export class Dashboard {
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
 
-  protected readonly isAppointmentsLoading = signal(true);
+  protected readonly isAppointmentsLoading = signal(false);
   protected readonly appointmentsError = signal('');
 
   protected readonly currentPage = signal(1);
