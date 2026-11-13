@@ -1,32 +1,21 @@
 
 <div class="dashboard-content">
 
-  <!-- Welcome section -->
   <section class="welcome-banner">
     <div class="welcome-copy">
       <span class="eyebrow">HEALTHCARE OVERVIEW</span>
       <h1>Welcome back, Admin <span class="wave">👋</span></h1>
-      <p>
-        Here's what's happening across your healthcare platform.
-        Manage your operations from one place.
-      </p>
-
-      <div class="welcome-meta">
-        <span class="meta-indicator"></span>
-        <span>Platform overview</span>
-        <span class="meta-divider"></span>
-        <span>{{ today | date: 'EEEE, dd MMMM yyyy' }}</span>
-      </div>
+      <p>Here's your healthcare platform at a glance.</p>
     </div>
 
-    <div class="welcome-decoration" aria-hidden="true">
-      <div class="decoration-circle circle-one"></div>
-      <div class="decoration-circle circle-two"></div>
-      <div class="decoration-icon">✚</div>
+    <div class="welcome-meta">
+      <span class="meta-indicator"></span>
+      <span>Platform overview</span>
+      <span class="meta-divider"></span>
+      <span>{{ today | date: 'EEEE, dd MMMM yyyy' }}</span>
     </div>
   </section>
 
-  <!-- Dashboard errors and loading -->
   @if (isLoading()) {
     <div class="dashboard-message" role="status">
       <span class="loading-dot"></span>
@@ -40,7 +29,6 @@
     </div>
   }
 
-  <!-- Statistics -->
   <section class="section-block">
     <div class="section-heading">
       <div>
@@ -48,10 +36,7 @@
         <h2>Platform statistics</h2>
         <p>A snapshot of your healthcare operations.</p>
       </div>
-      <span class="live-label">
-        <span></span>
-        Live data
-      </span>
+      <span class="live-label"><span></span>Live data</span>
     </div>
 
     <div class="statistics-grid">
@@ -61,7 +46,6 @@
             <div class="stat-icon">{{ stat.icon }}</div>
             <span class="stat-menu" aria-hidden="true">•••</span>
           </div>
-
           <div class="stat-value">{{ stat.value }}</div>
           <div class="stat-label">{{ stat.label }}</div>
           <div class="stat-description">{{ stat.description }}</div>
@@ -70,18 +54,15 @@
     </div>
   </section>
 
-  <!-- Main content -->
   <section class="main-dashboard-grid">
 
-    <!-- Appointment table -->
     <article class="panel appointments-panel">
       <div class="panel-header">
         <div>
           <span class="section-kicker">SCHEDULE MANAGEMENT</span>
           <h2>Recent appointments</h2>
-          <p>Keep track of patient visits and upcoming schedules.</p>
+          <p>Patient visits and upcoming schedules.</p>
         </div>
-
         <div class="appointment-count">
           <strong>{{ totalAppointmentRecords() }}</strong>
           <span>Total</span>
@@ -120,7 +101,6 @@
                   <th>STATUS</th>
                 </tr>
               </thead>
-
               <tbody>
                 @for (appointment of appointments(); track $index) {
                   <tr>
@@ -132,26 +112,18 @@
                         <strong>{{ appointment.patient }}</strong>
                       </div>
                     </td>
-
                     <td>
-                      <span class="provider-name">
-                        {{ appointment.provider }}
-                      </span>
+                      <span class="provider-name">{{ appointment.provider }}</span>
                     </td>
-
                     <td>
                       <div class="date-cell">
                         <strong>{{ appointment.date }}</strong>
                         <span>{{ appointment.time }}</span>
                       </div>
                     </td>
-
                     <td>
-                      <span class="appointment-reason">
-                        {{ appointment.type }}
-                      </span>
+                      <span class="appointment-reason">{{ appointment.type }}</span>
                     </td>
-
                     <td>
                       <span
                         class="status-badge"
@@ -178,7 +150,6 @@
                 · {{ totalAppointmentRecords() }} appointments
               </span>
             </span>
-
             <div class="pagination-actions">
               <button
                 type="button"
@@ -188,15 +159,11 @@
               >
                 ← Previous
               </button>
-
               <button
                 type="button"
                 class="pagination-button next-button"
                 (click)="goToNextPage()"
-                [disabled]="
-                  currentPage() >= totalPages() ||
-                  isAppointmentsLoading()
-                "
+                [disabled]="currentPage() >= totalPages() || isAppointmentsLoading()"
               >
                 Next →
               </button>
@@ -206,13 +173,12 @@
       }
     </article>
 
-    <!-- Record distribution -->
     <article class="panel distribution-panel">
       <div class="panel-header">
         <div>
           <span class="section-kicker">DATA SNAPSHOT</span>
           <h2>Record distribution</h2>
-          <p>Breakdown of available platform records.</p>
+          <p>Breakdown of platform records.</p>
         </div>
       </div>
 
@@ -248,7 +214,6 @@
                 </span>
                 <strong>{{ item.value.toLocaleString() }}</strong>
               </div>
-
               <div class="progress-track">
                 <div
                   class="progress-fill"
@@ -263,7 +228,6 @@
     </article>
   </section>
 
-  <!-- Platform modules -->
   <section class="section-block modules-section">
     <div class="section-heading">
       <div>
