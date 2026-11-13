@@ -50,56 +50,76 @@
         <button class="text-button">View all →</button>
       </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>PATIENT</th>
-              <th>PROVIDER</th>
-              <th>DATE & TIME</th>
-              <th>TYPE</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
+      @if (isAppointmentsLoading()) {
+        <div class="dashboard-message" role="status">
+          Loading recent appointments...
+        </div>
+      }
 
-          <tbody>
-            @for (appointment of appointments; track appointment.patient) {
-              <tr>
-                <td>
-                  <div class="patient-cell">
-                    <div class="patient-avatar">
-                      {{ appointment.patient.charAt(0) }}
-                    </div>
-                    <strong>{{ appointment.patient }}</strong>
-                  </div>
-                </td>
+      @if (appointmentsError()) {
+        <div class="dashboard-error" role="alert">
+          {{ appointmentsError() }}
+        </div>
+      }
 
-                <td>{{ appointment.provider }}</td>
+      @if (!isAppointmentsLoading() && !appointmentsError()) {
+        @if (appointments().length === 0) {
+          <div class="dashboard-message">
+            No appointments found.
+          </div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>PATIENT</th>
+                  <th>PROVIDER</th>
+                  <th>DATE & TIME</th>
+                  <th>TYPE</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
 
-                <td>
-                  <div class="date-cell">
-                    <strong>{{ appointment.date }}</strong>
-                    <span>{{ appointment.time }}</span>
-                  </div>
-                </td>
+              <tbody>
+                @for (appointment of appointments(); track $index) {
+                  <tr>
+                    <td>
+                      <div class="patient-cell">
+                        <div class="patient-avatar">
+                          {{ appointment.patient.charAt(0) }}
+                        </div>
+                        <strong>{{ appointment.patient }}</strong>
+                      </div>
+                    </td>
 
-                <td>{{ appointment.type }}</td>
+                    <td>{{ appointment.provider }}</td>
 
-                <td>
-                  <span
-                    class="status-badge"
-                    [class.confirmed]="appointment.status === 'Confirmed'"
-                    [class.scheduled]="appointment.status === 'Scheduled'"
-                    [class.pending]="appointment.status === 'Pending'"
-                  >
-                    {{ appointment.status }}
-                  </span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+                    <td>
+                      <div class="date-cell">
+                        <strong>{{ appointment.date }}</strong>
+                        <span>{{ appointment.time }}</span>
+                      </div>
+                    </td>
+
+                    <td>{{ appointment.type }}</td>
+
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.confirmed]="appointment.status === 'Confirmed'"
+                        [class.scheduled]="appointment.status === 'Scheduled'"
+                        [class.pending]="appointment.status === 'Pending'"
+                      >
+                        {{ appointment.status }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
     </article>
 
     <article class="content-card activity-card">

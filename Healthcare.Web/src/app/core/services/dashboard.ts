@@ -13,6 +13,17 @@ export interface PaginatedResponse<T> {
   data: T[];
 }
 
+export interface Appointment {
+  id: number;
+  patientId: number;
+  patientName: string;
+  providerId: number;
+  providerName: string;
+  appointmentDate: string;
+  reason: string;
+  status: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -41,6 +52,12 @@ export class Dashboard {
   getMedicalRecordCount(): Observable<PaginatedResponse<unknown>> {
     return this.http.get<PaginatedResponse<unknown>>(
       `${this.apiUrl}/medicalrecords`
+    );
+  }
+
+  getRecentAppointments(): Observable<PaginatedResponse<Appointment>> {
+    return this.http.get<PaginatedResponse<Appointment>>(
+      `${this.apiUrl}/appointments`
     );
   }
 }

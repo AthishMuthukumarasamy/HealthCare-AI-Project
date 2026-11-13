@@ -3,7 +3,19 @@ import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 
-import { Dashboard as DashboardService } from '../../core/services/dashboard';
+import {
+  Appointment,
+  Dashboard as DashboardService
+} from '../../core/services/dashboard';
+
+interface DashboardAppointment {
+  patient: string;
+  provider: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -18,6 +30,9 @@ export class Dashboard {
   protected readonly title = signal('HealthConnect AI');
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
+
+  protected readonly isAppointmentsLoading = signal(true);
+  protected readonly appointmentsError = signal('');
 
   protected readonly navigationItems = [
     { label: 'Dashboard', icon: '▦', route: '/dashboard' },
@@ -34,43 +49,11 @@ export class Dashboard {
     { label: 'Medical Records', value: '—', change: '', icon: '▤' }
   ]);
 
-  protected readonly appointments = [
-    {
-      patient: 'Olivia Anderson',
-      provider: 'Dr. Rahul Kumar',
-      date: 'Nov 13, 2026',
-      time: '09:30 AM',
-      type: 'General Checkup',
-      status: 'Confirmed'
-    },
-    {
-      patient: 'James Wilson',
-      provider: 'Dr. Sarah Mitchell',
-      date: 'Nov 13, 2026',
-      time: '10:15 AM',
-      type: 'Cardiology',
-      status: 'Scheduled'
-    },
-    {
-      patient: 'Sophia Martinez',
-      provider: 'Dr. David Chen',
-      date: 'Nov 13, 2026',
-      time: '11:00 AM',
-      type: 'Dermatology',
-      status: 'Pending'
-    },
-    {
-      patient: 'Noah Thompson',
-      provider: 'Dr. Emily Brown',
-      date: 'Nov 13, 2026',
-      time: '01:30 PM',
-      type: 'General Checkup',
-      status: 'Confirmed'
-    }
-  ];
+  protected readonly appointments = signal<DashboardAppointment[]>([]);
 
   constructor() {
     this.loadDashboardStatistics();
+    this.loadRecentAppointments();
   }
 
   private loadDashboardStatistics(): void {
@@ -127,5 +110,62 @@ export class Dashboard {
         }
       }
     });
+  }
+
+  private loadRecentAppointments(): void {
+    this.isAppointmentsLoading.set(true);
+    this.appointmentsError.set('');
+
+    this.dashboardService.getRecentAppointments().subscribe({
+      next: response => {
+        const recentAppointments = [...response.data]
+          .sort(
+            (first, second) =>
+              new Date(first.appointmentDate).getTime() -
+              new Date(second.appointmentDate).getTime()
+          )
+          .slice(0, 5)
+          .map(appointment => this.formatAppointment(appointment));
+
+        this.appointments.set(recentAppointments);
+        this.isAppointmentsLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isAppointmentsLoading.set(false);
+
+        if (error.status === 401 || error.status === 403) {
+          this.appointmentsError.set(
+            'You do not have permission to load appointments.'
+          );
+        } else {
+          this.appointmentsError.set(
+            'Unable to load recent appointments. Please try again.'
+          );
+        }
+      }
+    });
+  }
+
+  private formatAppointment(
+    appointment: Appointment
+  ): DashboardAppointment {
+    const appointmentDate = new Date(appointment.appointmentDate);
+
+    return {
+      patient: appointment.patientName,
+      provider: `Dr. ${appointment.providerName}`,
+      date: appointmentDate.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }),
+      time: appointmentDate.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      type: appointment.reason,
+      status: appointment.status
+    };
   }
 }
