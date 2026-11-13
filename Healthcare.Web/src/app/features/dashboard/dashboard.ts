@@ -1,5 +1,6 @@
 
 import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 
@@ -17,17 +18,33 @@ interface DashboardAppointment {
   status: string;
 }
 
+interface DashboardStatistic {
+  label: string;
+  value: string;
+  icon: string;
+  tone: string;
+  description: string;
+}
+
+interface DistributionItem {
+  label: string;
+  value: number;
+  percentage: number;
+  tone: string;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [],
+  imports: [DatePipe],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
 export class Dashboard {
   private readonly dashboardService = inject(DashboardService);
 
-  protected readonly title = signal('HealthConnect AI');
+  protected readonly today = new Date();
+
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
 
@@ -39,20 +56,38 @@ export class Dashboard {
   protected readonly totalPages = signal(0);
   protected readonly totalAppointmentRecords = signal(0);
 
-  protected readonly navigationItems = [
-    { label: 'Dashboard', icon: '▦', route: '/dashboard' },
-    { label: 'Patients', icon: '♙', route: '/patients' },
-    { label: 'Providers', icon: '⚕', route: '/providers' },
-    { label: 'Appointments', icon: '▣', route: '/appointments' },
-    { label: 'Medical Records', icon: '▤', route: '/medical-records' }
-  ];
-
-  protected readonly statistics = signal([
-    { label: 'Total Patients', value: '—', change: '', icon: '♙' },
-    { label: 'Total Providers', value: '—', change: '', icon: '⚕' },
-    { label: 'Appointments', value: '—', change: '', icon: '▣' },
-    { label: 'Medical Records', value: '—', change: '', icon: '▤' }
+  protected readonly statistics = signal<DashboardStatistic[]>([
+    {
+      label: 'Total Patients',
+      value: '—',
+      icon: '♙',
+      tone: 'blue',
+      description: 'Registered patients'
+    },
+    {
+      label: 'Healthcare Providers',
+      value: '—',
+      icon: '⚕',
+      tone: 'green',
+      description: 'Available professionals'
+    },
+    {
+      label: 'Appointments',
+      value: '—',
+      icon: '▣',
+      tone: 'purple',
+      description: 'Total scheduled visits'
+    },
+    {
+      label: 'Medical Records',
+      value: '—',
+      icon: '▤',
+      tone: 'orange',
+      description: 'Stored medical records'
+    }
   ]);
+
+  protected readonly distribution = signal<DistributionItem[]>([]);
 
   protected readonly appointments = signal<DashboardAppointment[]>([]);
 
@@ -72,30 +107,72 @@ export class Dashboard {
       medicalRecords: this.dashboardService.getMedicalRecordCount()
     }).subscribe({
       next: response => {
+        const patientCount = response.patients.totalRecords;
+        const providerCount = response.providers.totalRecords;
+        const appointmentCount = response.appointments.totalRecords;
+        const medicalRecordCount = response.medicalRecords.totalRecords;
+
         this.statistics.set([
           {
             label: 'Total Patients',
-            value: response.patients.totalRecords.toLocaleString(),
-            change: '',
-            icon: '♙'
+            value: patientCount.toLocaleString(),
+            icon: '♙',
+            tone: 'blue',
+            description: 'Registered patients'
           },
           {
-            label: 'Total Providers',
-            value: response.providers.totalRecords.toLocaleString(),
-            change: '',
-            icon: '⚕'
+            label: 'Healthcare Providers',
+            value: providerCount.toLocaleString(),
+            icon: '⚕',
+            tone: 'green',
+            description: 'Available professionals'
           },
           {
             label: 'Appointments',
-            value: response.appointments.totalRecords.toLocaleString(),
-            change: '',
-            icon: '▣'
+            value: appointmentCount.toLocaleString(),
+            icon: '▣',
+            tone: 'purple',
+            description: 'Total scheduled visits'
           },
           {
             label: 'Medical Records',
-            value: response.medicalRecords.totalRecords.toLocaleString(),
-            change: '',
-            icon: '▤'
+            value: medicalRecordCount.toLocaleString(),
+            icon: '▤',
+            tone: 'orange',
+            description: 'Stored medical records'
+          }
+        ]);
+
+        const total =
+          patientCount +
+          providerCount +
+          appointmentCount +
+          medicalRecordCount;
+
+        this.distribution.set([
+          {
+            label: 'Patients',
+            value: patientCount,
+            percentage: total > 0 ? (patientCount / total) * 100 : 0,
+            tone: 'blue'
+          },
+          {
+            label: 'Providers',
+            value: providerCount,
+            percentage: total > 0 ? (providerCount / total) * 100 : 0,
+            tone: 'green'
+          },
+          {
+            label: 'Appointments',
+            value: appointmentCount,
+            percentage: total > 0 ? (appointmentCount / total) * 100 : 0,
+            tone: 'purple'
+          },
+          {
+            label: 'Medical Records',
+            value: medicalRecordCount,
+            percentage: total > 0 ? (medicalRecordCount / total) * 100 : 0,
+            tone: 'orange'
           }
         ]);
 

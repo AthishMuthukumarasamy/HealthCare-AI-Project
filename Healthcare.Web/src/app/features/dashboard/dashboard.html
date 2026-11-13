@@ -1,20 +1,35 @@
 
 <div class="dashboard-content">
-  <section class="welcome-section">
-    <div>
-      <span class="welcome-label">OVERVIEW</span>
-      <h1>Welcome back, Admin 👋</h1>
-      <p>Here's what's happening across your healthcare platform today.</p>
+
+  <!-- Welcome section -->
+  <section class="welcome-banner">
+    <div class="welcome-copy">
+      <span class="eyebrow">HEALTHCARE OVERVIEW</span>
+      <h1>Welcome back, Admin <span class="wave">👋</span></h1>
+      <p>
+        Here's what's happening across your healthcare platform.
+        Manage your operations from one place.
+      </p>
+
+      <div class="welcome-meta">
+        <span class="meta-indicator"></span>
+        <span>Platform overview</span>
+        <span class="meta-divider"></span>
+        <span>{{ today | date: 'EEEE, dd MMMM yyyy' }}</span>
+      </div>
     </div>
 
-    <button class="primary-button" type="button">
-      <span>+</span>
-      New Appointment
-    </button>
+    <div class="welcome-decoration" aria-hidden="true">
+      <div class="decoration-circle circle-one"></div>
+      <div class="decoration-circle circle-two"></div>
+      <div class="decoration-icon">✚</div>
+    </div>
   </section>
 
+  <!-- Dashboard errors and loading -->
   @if (isLoading()) {
     <div class="dashboard-message" role="status">
+      <span class="loading-dot"></span>
       Loading dashboard statistics...
     </div>
   }
@@ -25,33 +40,57 @@
     </div>
   }
 
-  <section class="statistics-grid">
-    @for (stat of statistics(); track stat.label) {
-      <article class="stat-card">
-        <div class="stat-card-top">
-          <span class="stat-icon">{{ stat.icon }}</span>
-          <span class="stat-change">{{ stat.change }}</span>
-        </div>
+  <!-- Statistics -->
+  <section class="section-block">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">AT A GLANCE</span>
+        <h2>Platform statistics</h2>
+        <p>A snapshot of your healthcare operations.</p>
+      </div>
+      <span class="live-label">
+        <span></span>
+        Live data
+      </span>
+    </div>
 
-        <div class="stat-value">{{ stat.value }}</div>
-        <div class="stat-label">{{ stat.label }}</div>
-      </article>
-    }
+    <div class="statistics-grid">
+      @for (stat of statistics(); track stat.label) {
+        <article class="stat-card" [class]="'stat-card tone-' + stat.tone">
+          <div class="stat-top">
+            <div class="stat-icon">{{ stat.icon }}</div>
+            <span class="stat-menu" aria-hidden="true">•••</span>
+          </div>
+
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-label">{{ stat.label }}</div>
+          <div class="stat-description">{{ stat.description }}</div>
+        </article>
+      }
+    </div>
   </section>
 
-  <section class="dashboard-grid">
-    <article class="content-card appointments-card">
-      <div class="card-header">
+  <!-- Main content -->
+  <section class="main-dashboard-grid">
+
+    <!-- Appointment table -->
+    <article class="panel appointments-panel">
+      <div class="panel-header">
         <div>
-          <h2>Recent Appointments</h2>
-          <p>Overview of upcoming appointments</p>
+          <span class="section-kicker">SCHEDULE MANAGEMENT</span>
+          <h2>Recent appointments</h2>
+          <p>Keep track of patient visits and upcoming schedules.</p>
         </div>
 
-        <button class="text-button" type="button">View all →</button>
+        <div class="appointment-count">
+          <strong>{{ totalAppointmentRecords() }}</strong>
+          <span>Total</span>
+        </div>
       </div>
 
       @if (isAppointmentsLoading()) {
         <div class="dashboard-message" role="status">
+          <span class="loading-dot"></span>
           Loading appointments...
         </div>
       }
@@ -64,8 +103,10 @@
 
       @if (!isAppointmentsLoading() && !appointmentsError()) {
         @if (appointments().length === 0) {
-          <div class="dashboard-message">
-            No appointments found.
+          <div class="empty-state">
+            <div class="empty-icon">▣</div>
+            <strong>No appointments found</strong>
+            <p>Appointments will appear here when available.</p>
           </div>
         } @else {
           <div class="table-wrapper">
@@ -73,9 +114,9 @@
               <thead>
                 <tr>
                   <th>PATIENT</th>
-                  <th>PROVIDER</th>
+                  <th>HEALTHCARE PROVIDER</th>
                   <th>DATE & TIME</th>
-                  <th>TYPE</th>
+                  <th>REASON</th>
                   <th>STATUS</th>
                 </tr>
               </thead>
@@ -92,7 +133,11 @@
                       </div>
                     </td>
 
-                    <td>{{ appointment.provider }}</td>
+                    <td>
+                      <span class="provider-name">
+                        {{ appointment.provider }}
+                      </span>
+                    </td>
 
                     <td>
                       <div class="date-cell">
@@ -101,7 +146,11 @@
                       </div>
                     </td>
 
-                    <td>{{ appointment.type }}</td>
+                    <td>
+                      <span class="appointment-reason">
+                        {{ appointment.type }}
+                      </span>
+                    </td>
 
                     <td>
                       <span
@@ -109,7 +158,10 @@
                         [class.confirmed]="appointment.status === 'Confirmed'"
                         [class.scheduled]="appointment.status === 'Scheduled'"
                         [class.pending]="appointment.status === 'Pending'"
+                        [class.completed]="appointment.status === 'Completed'"
+                        [class.cancelled]="appointment.status === 'Cancelled'"
                       >
+                        <span class="status-dot"></span>
                         {{ appointment.status }}
                       </span>
                     </td>
@@ -122,7 +174,9 @@
           <div class="pagination">
             <span class="pagination-info">
               Showing page {{ currentPage() }} of {{ totalPages() }}
-              ({{ totalAppointmentRecords() }} appointments)
+              <span class="pagination-total">
+                · {{ totalAppointmentRecords() }} appointments
+              </span>
             </span>
 
             <div class="pagination-actions">
@@ -137,7 +191,7 @@
 
               <button
                 type="button"
-                class="pagination-button"
+                class="pagination-button next-button"
                 (click)="goToNextPage()"
                 [disabled]="
                   currentPage() >= totalPages() ||
@@ -152,54 +206,115 @@
       }
     </article>
 
-    <article class="content-card activity-card">
-      <div class="card-header">
+    <!-- Record distribution -->
+    <article class="panel distribution-panel">
+      <div class="panel-header">
         <div>
-          <h2>Platform Overview</h2>
-          <p>Healthcare management at a glance</p>
+          <span class="section-kicker">DATA SNAPSHOT</span>
+          <h2>Record distribution</h2>
+          <p>Breakdown of available platform records.</p>
         </div>
       </div>
 
-      <div class="overview-item">
-        <div class="overview-icon patients-icon">♙</div>
-        <div class="overview-details">
-          <strong>Patient Management</strong>
-          <span>Manage patient profiles</span>
+      @if (isLoading()) {
+        <div class="distribution-loading">Preparing overview...</div>
+      } @else {
+        <div class="distribution-visual">
+          <div class="distribution-center">
+            <span>Records</span>
+            <strong>
+              {{
+                statistics()[0].value === '—'
+                  ? '—'
+                  : (
+                      (distribution()[0]?.value ?? 0) +
+                      (distribution()[1]?.value ?? 0) +
+                      (distribution()[2]?.value ?? 0) +
+                      (distribution()[3]?.value ?? 0)
+                    ).toLocaleString()
+              }}
+            </strong>
+            <small>Across modules</small>
+          </div>
         </div>
-        <span class="overview-arrow">→</span>
-      </div>
 
-      <div class="overview-item">
-        <div class="overview-icon providers-icon">⚕</div>
-        <div class="overview-details">
-          <strong>Provider Management</strong>
-          <span>Manage healthcare providers</span>
-        </div>
-        <span class="overview-arrow">→</span>
-      </div>
+        <div class="distribution-list">
+          @for (item of distribution(); track item.label) {
+            <div class="distribution-item">
+              <div class="distribution-label">
+                <span class="distribution-name">
+                  <span class="legend-dot" [class]="'legend-dot ' + item.tone"></span>
+                  {{ item.label }}
+                </span>
+                <strong>{{ item.value.toLocaleString() }}</strong>
+              </div>
 
-      <div class="overview-item">
-        <div class="overview-icon appointments-icon">▣</div>
-        <div class="overview-details">
-          <strong>Appointments</strong>
-          <span>Track scheduled visits</span>
+              <div class="progress-track">
+                <div
+                  class="progress-fill"
+                  [class]="'progress-fill ' + item.tone"
+                  [style.width.%]="item.percentage"
+                ></div>
+              </div>
+            </div>
+          }
         </div>
-        <span class="overview-arrow">→</span>
-      </div>
-
-      <div class="overview-item">
-        <div class="overview-icon records-icon">▤</div>
-        <div class="overview-details">
-          <strong>Medical Records</strong>
-          <span>Access patient records</span>
-        </div>
-        <span class="overview-arrow">→</span>
-      </div>
+      }
     </article>
+  </section>
+
+  <!-- Platform modules -->
+  <section class="section-block modules-section">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">WORKSPACE</span>
+        <h2>Healthcare management</h2>
+        <p>Your core platform modules in one place.</p>
+      </div>
+    </div>
+
+    <div class="module-grid">
+      <article class="module-card">
+        <div class="module-icon module-blue">♙</div>
+        <div class="module-copy">
+          <h3>Patient management</h3>
+          <p>Manage patient profiles and information.</p>
+        </div>
+        <span class="module-arrow">↗</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-icon module-green">⚕</div>
+        <div class="module-copy">
+          <h3>Provider management</h3>
+          <p>Organise healthcare professionals.</p>
+        </div>
+        <span class="module-arrow">↗</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-icon module-purple">▣</div>
+        <div class="module-copy">
+          <h3>Appointments</h3>
+          <p>Manage visits and appointment schedules.</p>
+        </div>
+        <span class="module-arrow">↗</span>
+      </article>
+
+      <article class="module-card">
+        <div class="module-icon module-orange">▤</div>
+        <div class="module-copy">
+          <h3>Medical records</h3>
+          <p>Access and maintain medical records.</p>
+        </div>
+        <span class="module-arrow">↗</span>
+      </article>
+    </div>
   </section>
 
   <footer class="dashboard-footer">
     <span>© 2026 HealthConnect AI</span>
     <span>Healthcare management, made smarter.</span>
   </footer>
+
 </div>
