@@ -13,8 +13,20 @@
     </button>
   </section>
 
+  @if (isLoading()) {
+    <div class="dashboard-message" role="status">
+      Loading dashboard statistics...
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="dashboard-error" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
   <section class="statistics-grid">
-    @for (stat of statistics; track stat.label) {
+    @for (stat of statistics(); track stat.label) {
       <article class="stat-card">
         <div class="stat-card-top">
           <span class="stat-icon">{{ stat.icon }}</span>

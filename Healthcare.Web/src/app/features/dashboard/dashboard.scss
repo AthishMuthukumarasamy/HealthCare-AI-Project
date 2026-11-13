@@ -766,3 +766,22 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+
+.dashboard-message {
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: #eaf3fb;
+  color: #315b7d;
+  font-size: 13px;
+}
+
+.dashboard-error {
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: #fff0f0;
+  color: #b42318;
+  font-size: 13px;
+}

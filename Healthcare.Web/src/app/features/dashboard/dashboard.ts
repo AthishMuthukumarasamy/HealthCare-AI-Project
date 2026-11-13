@@ -1,5 +1,8 @@
 
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+
+import { Dashboard as DashboardService } from '../../core/services/dashboard';
 
 @Component({
   selector: 'app-dashboard',
@@ -9,7 +12,12 @@ import { Component, signal } from '@angular/core';
   styleUrl: './dashboard.scss'
 })
 export class Dashboard {
+  private readonly dashboardService = inject(DashboardService);
+
   protected readonly title = signal('HealthConnect AI');
+
+  protected readonly isLoading = signal(true);
+  protected readonly errorMessage = signal('');
 
   protected readonly navigationItems = [
     { label: 'Dashboard', icon: '▦', route: '/dashboard' },
@@ -19,12 +27,12 @@ export class Dashboard {
     { label: 'Medical Records', icon: '▤', route: '/medical-records' }
   ];
 
-  protected readonly statistics = [
-    { label: 'Total Patients', value: '1,248', change: '+12.5%', icon: '♙' },
-    { label: 'Total Providers', value: '48', change: '+4.2%', icon: '⚕' },
-    { label: 'Appointments', value: '86', change: '+8.1%', icon: '▣' },
-    { label: 'Medical Records', value: '2,540', change: '+15.3%', icon: '▤' }
-  ];
+  protected readonly statistics = signal([
+    { label: 'Total Patients', value: '—', change: '', icon: '♙' },
+    { label: 'Total Providers', value: '—', change: '', icon: '⚕' },
+    { label: 'Appointments', value: '—', change: '', icon: '▣' },
+    { label: 'Medical Records', value: '—', change: '', icon: '▤' }
+  ]);
 
   protected readonly appointments = [
     {
@@ -60,4 +68,40 @@ export class Dashboard {
       status: 'Confirmed'
     }
   ];
+
+  constructor() {
+    this.loadPatientCount();
+  }
+
+  private loadPatientCount(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    this.dashboardService.getPatientCount().subscribe({
+      next: response => {
+        this.statistics.update(items =>
+          items.map(item =>
+            item.label === 'Total Patients'
+              ? { ...item, value: response.totalRecords.toLocaleString() }
+              : item
+          )
+        );
+
+        this.isLoading.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isLoading.set(false);
+
+        if (error.status === 401 || error.status === 403) {
+          this.errorMessage.set(
+            'You do not have permission to load dashboard statistics.'
+          );
+        } else {
+          this.errorMessage.set(
+            'Unable to load patient statistics. Please try again.'
+          );
+        }
+      }
+    });
+  }
 }
