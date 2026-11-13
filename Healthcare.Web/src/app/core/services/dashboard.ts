@@ -1,6 +1,6 @@
 
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -55,9 +55,19 @@ export class Dashboard {
     );
   }
 
-  getRecentAppointments(): Observable<PaginatedResponse<Appointment>> {
+  getRecentAppointments(
+    pageNumber: number = 1,
+    pageSize: number = 5
+  ): Observable<PaginatedResponse<Appointment>> {
+    const params = new HttpParams()
+      .set('pageNumber', pageNumber)
+      .set('pageSize', pageSize)
+      .set('sortBy', 'appointmentDate')
+      .set('sortOrder', 'asc');
+
     return this.http.get<PaginatedResponse<Appointment>>(
-      `${this.apiUrl}/appointments`
+      `${this.apiUrl}/appointments`,
+      { params }
     );
   }
 }

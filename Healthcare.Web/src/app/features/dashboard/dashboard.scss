@@ -458,3 +458,66 @@ td {
     padding-left: 12px;
   }
 }
+
+
+
+/* Appointment pagination */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  border-top: 1px solid #f0f2f5;
+}
+
+.pagination-info {
+  color: #718195;
+  font-size: 13px;
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-button {
+  padding: 9px 13px;
+  border: 1px solid #dce4ec;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #344b62;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.pagination-button:hover:not(:disabled) {
+  border-color: #13a99a;
+  background: #e9f7f5;
+  color: #0e9185;
+}
+
+.pagination-button:disabled {
+  background: #f5f7f9;
+  color: #a5b1bf;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pagination-actions {
+    width: 100%;
+  }
+
+  .pagination-button {
+    flex: 1;
+  }
+}

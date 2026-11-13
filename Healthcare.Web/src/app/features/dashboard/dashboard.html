@@ -7,7 +7,7 @@
       <p>Here's what's happening across your healthcare platform today.</p>
     </div>
 
-    <button class="primary-button">
+    <button class="primary-button" type="button">
       <span>+</span>
       New Appointment
     </button>
@@ -47,12 +47,12 @@
           <p>Overview of upcoming appointments</p>
         </div>
 
-        <button class="text-button">View all →</button>
+        <button class="text-button" type="button">View all →</button>
       </div>
 
       @if (isAppointmentsLoading()) {
         <div class="dashboard-message" role="status">
-          Loading recent appointments...
+          Loading appointments...
         </div>
       }
 
@@ -117,6 +117,36 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="pagination">
+            <span class="pagination-info">
+              Showing page {{ currentPage() }} of {{ totalPages() }}
+              ({{ totalAppointmentRecords() }} appointments)
+            </span>
+
+            <div class="pagination-actions">
+              <button
+                type="button"
+                class="pagination-button"
+                (click)="goToPreviousPage()"
+                [disabled]="currentPage() <= 1 || isAppointmentsLoading()"
+              >
+                ← Previous
+              </button>
+
+              <button
+                type="button"
+                class="pagination-button"
+                (click)="goToNextPage()"
+                [disabled]="
+                  currentPage() >= totalPages() ||
+                  isAppointmentsLoading()
+                "
+              >
+                Next →
+              </button>
+            </div>
           </div>
         }
       }

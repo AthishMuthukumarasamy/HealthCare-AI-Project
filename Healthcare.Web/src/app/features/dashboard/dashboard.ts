@@ -34,6 +34,11 @@ export class Dashboard {
   protected readonly isAppointmentsLoading = signal(true);
   protected readonly appointmentsError = signal('');
 
+  protected readonly currentPage = signal(1);
+  protected readonly pageSize = 5;
+  protected readonly totalPages = signal(0);
+  protected readonly totalAppointmentRecords = signal(0);
+
   protected readonly navigationItems = [
     { label: 'Dashboard', icon: '▦', route: '/dashboard' },
     { label: 'Patients', icon: '♙', route: '/patients' },
@@ -53,7 +58,7 @@ export class Dashboard {
 
   constructor() {
     this.loadDashboardStatistics();
-    this.loadRecentAppointments();
+    this.loadAppointmentsPage(1);
   }
 
   private loadDashboardStatistics(): void {
@@ -112,38 +117,65 @@ export class Dashboard {
     });
   }
 
-  private loadRecentAppointments(): void {
+  protected loadAppointmentsPage(page: number): void {
+    if (
+      this.isAppointmentsLoading() ||
+      page < 1 ||
+      (this.totalPages() > 0 && page > this.totalPages())
+    ) {
+      return;
+    }
+
     this.isAppointmentsLoading.set(true);
     this.appointmentsError.set('');
 
-    this.dashboardService.getRecentAppointments().subscribe({
-      next: response => {
-        const recentAppointments = [...response.data]
-          .sort(
+    this.dashboardService
+      .getRecentAppointments(page, this.pageSize)
+      .subscribe({
+        next: response => {
+          const sortedAppointments = [...response.data].sort(
             (first, second) =>
               new Date(first.appointmentDate).getTime() -
               new Date(second.appointmentDate).getTime()
-          )
-          .slice(0, 5)
-          .map(appointment => this.formatAppointment(appointment));
-
-        this.appointments.set(recentAppointments);
-        this.isAppointmentsLoading.set(false);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.isAppointmentsLoading.set(false);
-
-        if (error.status === 401 || error.status === 403) {
-          this.appointmentsError.set(
-            'You do not have permission to load appointments.'
           );
-        } else {
-          this.appointmentsError.set(
-            'Unable to load recent appointments. Please try again.'
+
+          this.appointments.set(
+            sortedAppointments.map(appointment =>
+              this.formatAppointment(appointment)
+            )
           );
+
+          this.currentPage.set(response.pageNumber);
+          this.totalPages.set(response.totalPages);
+          this.totalAppointmentRecords.set(response.totalRecords);
+          this.isAppointmentsLoading.set(false);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.isAppointmentsLoading.set(false);
+
+          if (error.status === 401 || error.status === 403) {
+            this.appointmentsError.set(
+              'You do not have permission to load appointments.'
+            );
+          } else {
+            this.appointmentsError.set(
+              'Unable to load appointments. Please try again.'
+            );
+          }
         }
-      }
-    });
+      });
+  }
+
+  protected goToPreviousPage(): void {
+    if (this.currentPage() > 1) {
+      this.loadAppointmentsPage(this.currentPage() - 1);
+    }
+  }
+
+  protected goToNextPage(): void {
+    if (this.currentPage() < this.totalPages()) {
+      this.loadAppointmentsPage(this.currentPage() + 1);
+    }
   }
 
   private formatAppointment(
